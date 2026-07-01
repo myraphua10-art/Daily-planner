@@ -128,9 +128,13 @@
           headers: { "x-admin-passcode": val },
         });
         if (!res.ok) {
-          const detail = res.status === 401
-            ? "Wrong passcode (server says the ADMIN_PASSCODE secret doesn't match what you typed)."
-            : `Server error (HTTP ${res.status}). This usually means the ADMIN_PASSCODE secret isn't set on the Worker, or the deploy hasn't picked it up yet.`;
+          const data = await res.json().catch(() => ({}));
+          let detail = `Server error (HTTP ${res.status}).`;
+          if (data.debug) {
+            detail = data.debug.secretIsSet
+              ? `Wrong passcode. Server secret is ${data.debug.secretLength} characters, you typed ${data.debug.providedLength}.`
+              : "No ADMIN_PASSCODE secret is set on this Worker at all - add it in Settings -> Variables and Secrets.";
+          }
           gateMsg.innerHTML = `<div class="msg error">${detail}</div>`;
           return;
         }
