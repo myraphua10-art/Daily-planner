@@ -1,0 +1,17 @@
+name = "daily-planner"
+main = "worker/index.js"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "./"
+binding = "ASSETS"
+
+# Create a KV namespace (Workers & Pages -> KV -> Create namespace) and put
+# its id below. Needed so the assassin game has somewhere to store the
+# guest list and target assignments.
+[[kv_namespaces]]
+binding = "ASSASSIN_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+# ADMIN_PASSCODE is set as a secret via the dashboard (Worker -> Settings ->
+# Variables and Secrets), not here - so it never ends up in the repo.
