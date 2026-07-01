@@ -8,8 +8,9 @@ export function json(data, status = 200) {
 }
 
 export function requireAdmin(request, env) {
-  const provided = request.headers.get("x-admin-passcode") || "";
-  return Boolean(env.ADMIN_PASSCODE) && provided === env.ADMIN_PASSCODE;
+  const provided = (request.headers.get("x-admin-passcode") || "").trim();
+  const expected = (env.ADMIN_PASSCODE || "").trim();
+  return Boolean(expected) && provided === expected;
 }
 
 export async function getGame(env) {

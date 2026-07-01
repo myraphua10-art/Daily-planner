@@ -121,14 +121,17 @@
     }
 
     document.getElementById("unlockBtn").addEventListener("click", async () => {
-      const val = document.getElementById("passcode").value;
+      const val = document.getElementById("passcode").value.trim();
       try {
         const res = await fetch("/api/admin-check", {
           method: "POST",
           headers: { "x-admin-passcode": val },
         });
         if (!res.ok) {
-          gateMsg.innerHTML = `<div class="msg error">Wrong passcode.</div>`;
+          const detail = res.status === 401
+            ? "Wrong passcode (server says the ADMIN_PASSCODE secret doesn't match what you typed)."
+            : `Server error (HTTP ${res.status}). This usually means the ADMIN_PASSCODE secret isn't set on the Worker, or the deploy hasn't picked it up yet.`;
+          gateMsg.innerHTML = `<div class="msg error">${detail}</div>`;
           return;
         }
       } catch (e) {
