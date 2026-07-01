@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#f3efe2; --card:#faf7ee; --ink:#211f1a; --sub:#6e6a5c; --line:#ded6bf; --accent:#1c1a15;
+    --paper:#f3efe2; --card:#faf7ee; --ink:#211f1a; --sub:#6e6a5c; --line:#ded6bf; --accent:#1c1a15; --gold:#a4762f;
   }
   *{box-sizing:border-box;}
   body{
@@ -40,6 +40,11 @@
     font-family:"EB Garamond", Georgia, serif;
   }
   button.secondary{background:transparent; color:var(--accent);}
+  button.kill-btn{
+    background:var(--gold); border-color:var(--gold); color:#fff8ea; margin-top:16px;
+    box-shadow:0 4px 14px rgba(164,118,47,0.35); font-size:14px; letter-spacing:.08em;
+  }
+  button.kill-btn:active{box-shadow:0 2px 6px rgba(164,118,47,0.35);}
   button:disabled{opacity:.5; cursor:not-allowed;}
   .msg{font-size:14px; padding:12px 14px; border-radius:3px; margin-bottom:12px; border:1px solid var(--line);}
   .msg.error{background:#f8ece9; color:#7a2e20; border-color:#e3c6bd;}
@@ -76,7 +81,7 @@
       <div class="target" id="revealText">-</div>
     </div>
 
-    <button id="killBtn" class="hidden">I Got Them</button>
+    <button id="killBtn" class="kill-btn hidden">🎯 I Got Them</button>
 
     <p class="hint" id="hintText">Keep this to yourself! If you switch phones and lose access, ask Myra to reset your name.</p>
   </div>
