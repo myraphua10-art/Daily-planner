@@ -3,6 +3,7 @@ import { onRequestPost as generatePost } from "../functions/api/generate.js";
 import { onRequestGet as targetGet } from "../functions/api/target.js";
 import { onRequestPost as resetPost } from "../functions/api/reset.js";
 import { onRequestPost as adminCheckPost } from "../functions/api/admin-check.js";
+import { onRequestPost as eliminatePost } from "../functions/api/eliminate.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -11,6 +12,7 @@ const routes = {
   "GET /api/target": targetGet,
   "POST /api/reset": resetPost,
   "POST /api/admin-check": adminCheckPost,
+  "POST /api/eliminate": eliminatePost,
 };
 
 export default {

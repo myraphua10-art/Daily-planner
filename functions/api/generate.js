@@ -22,7 +22,14 @@ export async function onRequestPost({ request, env }) {
     Object.entries(assignments).map(([hunter, target]) =>
       env.ASSASSIN_KV.put(
         assignKey(hunter),
-        JSON.stringify({ targetName: target, ownerToken: null, claimedAt: null })
+        JSON.stringify({
+          targetName: target,
+          ownerToken: null,
+          claimedAt: null,
+          status: "active",
+          eliminatedBy: null,
+          eliminatedAt: null,
+        })
       )
     )
   );

@@ -20,16 +20,26 @@ export async function onRequestGet({ request, env }) {
 
   const providedToken = request.headers.get("x-claim-token") || "";
 
+  function reveal(token) {
+    if (record.status === "eliminated") {
+      return { eliminated: true, eliminatedBy: record.eliminatedBy, claimToken: token };
+    }
+    if (record.status === "won") {
+      return { won: true, claimToken: token };
+    }
+    return { targetName: record.targetName, claimToken: token };
+  }
+
   if (!record.ownerToken) {
     const token = crypto.randomUUID();
     record.ownerToken = token;
     record.claimedAt = Date.now();
     await env.ASSASSIN_KV.put(key, JSON.stringify(record));
-    return json({ targetName: record.targetName, claimToken: token });
+    return json(reveal(token));
   }
 
   if (providedToken && providedToken === record.ownerToken) {
-    return json({ targetName: record.targetName, claimToken: record.ownerToken });
+    return json(reveal(record.ownerToken));
   }
 
   return json({ error: "already-claimed" }, 409);

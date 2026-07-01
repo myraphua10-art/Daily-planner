@@ -26,6 +26,7 @@
     width:100%; padding:13px 14px; border-radius:12px; border:none; background:var(--accent); color:white;
     font-size:15px; font-weight:600; cursor:pointer;
   }
+  button.secondary{background:#f0f1fa; color:var(--accent); margin-top:10px;}
   button:disabled{opacity:.5; cursor:not-allowed;}
   .msg{font-size:13.5px; padding:12px 14px; border-radius:12px; margin-bottom:12px;}
   .msg.error{background:#fef2f2; color:#b91c1c;}
@@ -36,6 +37,8 @@
   }
   .reveal .lbl{font-size:12px; opacity:.85; text-transform:uppercase; letter-spacing:.06em;}
   .reveal .target{font-size:28px; font-weight:700; margin-top:6px;}
+  .reveal.eliminated{background:linear-gradient(135deg,#6b7280,#9ca3af);}
+  .reveal.won{background:linear-gradient(135deg,#f59e0b,#fbbf24);}
   .hint{font-size:12px; color:var(--sub); margin-top:14px; text-align:center; line-height:1.5;}
   .hidden{display:none;}
 </style>
@@ -43,7 +46,7 @@
 <body>
   <div class="card">
     <h1>Sweet 16 Assassin</h1>
-    <p class="sub">Pick your name to lock in and see who <b>you're</b> hunting. Nobody else - not even Myra - can see this screen, and it only ever shows your own target.</p>
+    <p class="sub" id="introText">Pick your name to lock in and see who <b>you're</b> hunting. Nobody else - not even Myra - can see this screen, and it only ever shows your own target.</p>
 
     <div id="msgArea"></div>
 
@@ -53,11 +56,13 @@
     </div>
 
     <div id="revealArea" class="reveal hidden">
-      <div class="lbl">Your target</div>
-      <div class="target" id="targetName">-</div>
+      <div class="lbl" id="revealLabel">Your target</div>
+      <div class="target" id="revealText">-</div>
     </div>
 
-    <p class="hint">Keep this to yourself! If you switch phones and lose access, ask Myra to reset your name.</p>
+    <button id="killBtn" class="hidden">I got them! 🎯</button>
+
+    <p class="hint" id="hintText">Keep this to yourself! If you switch phones and lose access, ask Myra to reset your name.</p>
   </div>
 
   <script type="module">
@@ -69,16 +74,45 @@
     const nameSelect = document.getElementById("nameSelect");
     const claimBtn = document.getElementById("claimBtn");
     const revealArea = document.getElementById("revealArea");
-    const targetNameEl = document.getElementById("targetName");
+    const revealLabel = document.getElementById("revealLabel");
+    const revealText = document.getElementById("revealText");
+    const killBtn = document.getElementById("killBtn");
+    const hintText = document.getElementById("hintText");
+
+    let currentName = null;
+    let currentToken = null;
 
     function showMessage(text, type = "info") {
       msgArea.innerHTML = `<div class="msg ${type}">${text}</div>`;
     }
 
-    function showTarget(name) {
+    function renderResult(result) {
       pickArea.classList.add("hidden");
       revealArea.classList.remove("hidden");
-      targetNameEl.textContent = name;
+      revealArea.classList.remove("eliminated", "won");
+
+      if (result.eliminated) {
+        revealArea.classList.add("eliminated");
+        revealLabel.textContent = "You've been eliminated";
+        revealText.textContent = result.eliminatedBy ? `by ${result.eliminatedBy}` : "Better luck next time!";
+        killBtn.classList.add("hidden");
+        hintText.textContent = "Thanks for playing! Stick around to see who wins.";
+        return;
+      }
+
+      if (result.won) {
+        revealArea.classList.add("won");
+        revealLabel.textContent = "🏆 You won!";
+        revealText.textContent = "You got everyone";
+        killBtn.classList.add("hidden");
+        hintText.textContent = "Congratulations, Assassin champion!";
+        return;
+      }
+
+      revealLabel.textContent = "Your target";
+      revealText.textContent = result.targetName;
+      killBtn.classList.remove("hidden");
+      hintText.textContent = "Keep this to yourself! If you switch phones and lose access, ask Myra to reset your name.";
     }
 
     async function fetchTarget(name, token) {
@@ -109,8 +143,10 @@
       const savedToken = localStorage.getItem(STORAGE_TOKEN);
       if (savedName && savedToken && game.players.includes(savedName)) {
         const result = await fetchTarget(savedName, savedToken);
-        if (result.targetName) {
-          showTarget(result.targetName);
+        if (result.targetName || result.eliminated || result.won) {
+          currentName = savedName;
+          currentToken = savedToken;
+          renderResult(result);
           return;
         }
       }
@@ -133,12 +169,41 @@
           }
           localStorage.setItem(STORAGE_NAME, name);
           localStorage.setItem(STORAGE_TOKEN, result.claimToken);
-          showTarget(result.targetName);
+          currentName = name;
+          currentToken = result.claimToken;
+          renderResult(result);
         } catch (e) {
           console.error(e);
           showMessage("Something went wrong. Try again in a moment.", "error");
         } finally {
           claimBtn.disabled = false;
+        }
+      });
+
+      killBtn.addEventListener("click", async () => {
+        if (!confirm(`Confirm you actually eliminated ${revealText.textContent}? This can't be undone.`)) return;
+        killBtn.disabled = true;
+        try {
+          const res = await fetch("/api/eliminate", {
+            method: "POST",
+            headers: { "x-claim-token": currentToken, "content-type": "application/json" },
+            body: JSON.stringify({ name: currentName }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            showMessage(data.error || "Something went wrong.", "error");
+            return;
+          }
+          if (data.won) {
+            renderResult({ won: true });
+          } else {
+            renderResult({ targetName: data.newTarget });
+          }
+        } catch (e) {
+          console.error(e);
+          showMessage("Something went wrong. Try again in a moment.", "error");
+        } finally {
+          killBtn.disabled = false;
         }
       });
     }
