@@ -42,10 +42,9 @@
   }
   button.secondary{background:transparent; color:var(--accent);}
   button.kill-btn{
-    background:var(--gold); border-color:var(--gold); color:#fff8ea; margin-top:16px;
-    box-shadow:0 4px 14px rgba(164,118,47,0.35); font-size:14px; letter-spacing:.08em;
+    background:transparent; border:none; color:var(--ink); margin-top:16px;
+    font-weight:700; font-size:15px; letter-spacing:normal; text-transform:none; box-shadow:none;
   }
-  button.kill-btn:active{box-shadow:0 2px 6px rgba(164,118,47,0.35);}
   button:disabled{opacity:.5; cursor:not-allowed;}
   .msg{font-size:14px; padding:12px 14px; border-radius:3px; margin-bottom:12px; border:1px solid var(--line);}
   .msg.error{background:#f8ece9; color:#7a2e20; border-color:#e3c6bd;}
@@ -64,6 +63,7 @@
     width:140px; height:140px; border-radius:3px; object-fit:cover; margin:14px auto 4px;
     display:block; border:3px solid var(--card); box-shadow:0 4px 14px rgba(0,0,0,0.3);
   }
+  .reveal .dossier-photo.hidden{display:none;}
   .reveal .target{font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700; font-size:30px; margin-top:8px;}
   .reveal.eliminated{background:var(--card); color:var(--ink); border:1px solid var(--line);}
   .reveal.eliminated .target{color:var(--sub); font-style:normal; font-size:20px;}
@@ -100,7 +100,7 @@
       <div class="target" id="revealText">-</div>
     </div>
 
-    <button id="killBtn" class="kill-btn hidden">🎯 I Got Them</button>
+    <button id="killBtn" class="kill-btn hidden">I Got Them</button>
 
     <p class="hint" id="hintText">Keep this to yourself! If you switch phones and lose access, ask Myra to reset your name.</p>
 
@@ -111,6 +111,7 @@
     const STORAGE_NAME = "assassin_claimed_name";
     const STORAGE_TOKEN = "assassin_claim_token";
 
+    const introText = document.getElementById("introText");
     const msgArea = document.getElementById("msgArea");
     const pickArea = document.getElementById("pickArea");
     const nameSelect = document.getElementById("nameSelect");
@@ -135,6 +136,7 @@
     }
 
     function renderResult(result) {
+      introText.classList.add("hidden");
       pickArea.classList.add("hidden");
       photoArea.classList.add("hidden");
       revealArea.classList.remove("hidden");
@@ -242,6 +244,7 @@
           const result = await fetchTarget(name, "");
           if (result.error === "not-claimed") {
             currentName = name;
+            introText.classList.add("hidden");
             pickArea.classList.add("hidden");
             photoArea.classList.remove("hidden");
             return;
