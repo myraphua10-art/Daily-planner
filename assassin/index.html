@@ -59,6 +59,7 @@
   .reveal.eliminated .target{color:var(--sub); font-style:normal; font-size:20px;}
   .reveal.won{background:var(--card); color:var(--ink); border:2px solid var(--accent);}
   .hint{font-size:12.5px; color:var(--sub); margin-top:16px; text-align:center; line-height:1.6; font-style:italic;}
+  .tagline{font-size:14px; color:#544f3f; margin:18px 0 0; text-align:center;}
   .hidden{display:none;}
 </style>
 </head>
@@ -66,7 +67,7 @@
   <div class="card">
     <span class="sparkle s1">&#10022;</span>
     <span class="sparkle s2">&#10022;</span>
-    <h1>Sweet 16 Assassin</h1>
+    <h1>Assassin</h1>
     <p class="sub" id="introText">Pick your name to lock in and see who <b>you're</b> hunting. Nobody else - not even Myra - can see this screen, and it only ever shows your own target.</p>
 
     <div id="msgArea"></div>
@@ -84,6 +85,8 @@
     <button id="killBtn" class="kill-btn hidden">🎯 I Got Them</button>
 
     <p class="hint" id="hintText">Keep this to yourself! If you switch phones and lose access, ask Myra to reset your name.</p>
+
+    <p class="tagline">This game will be the death of you....</p>
   </div>
 
   <script type="module">
@@ -149,7 +152,7 @@
       const game = await res.json();
 
       if (!game.locked) {
-        showMessage("Targets haven't been generated yet - check back closer to the party!", "info");
+        showMessage("Targets haven't been generated yet - check back closer to the party.", "info");
         pickArea.classList.add("hidden");
         return;
       }
