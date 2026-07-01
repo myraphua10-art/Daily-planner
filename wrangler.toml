@@ -11,7 +11,7 @@ binding = "ASSETS"
 # guest list and target assignments.
 [[kv_namespaces]]
 binding = "ASSASSIN_KV"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id = "c47c1406dc294c23868a296d9ec5b39a"
 
 # ADMIN_PASSCODE is set as a secret via the dashboard (Worker -> Settings ->
 # Variables and Secrets), not here - so it never ends up in the repo.
