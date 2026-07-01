@@ -4,47 +4,63 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Myra's Sweet 16 - Assassin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-  :root{ --bg:#f5f6fb; --card:#ffffff; --ink:#1c1e2b; --sub:#6b7280; --line:#e8e9f1; --accent:#6366f1; }
+  :root{
+    --paper:#f3efe2; --card:#faf7ee; --ink:#211f1a; --sub:#6e6a5c; --line:#ded6bf; --accent:#1c1a15;
+  }
   *{box-sizing:border-box;}
   body{
-    margin:0; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:linear-gradient(160deg,#eef1fb 0%, #f7f4fb 100%); color:var(--ink);
+    margin:0; min-height:100vh; font-family:"EB Garamond", Georgia, serif;
+    background:var(--paper); color:var(--ink);
     display:flex; align-items:center; justify-content:center; padding:24px;
   }
   .card{
-    background:var(--card); border-radius:20px; box-shadow:0 4px 24px rgba(30,30,60,0.10);
-    padding:28px 24px; max-width:420px; width:100%;
+    position:relative; background:var(--card); border:1px solid var(--line); border-radius:6px;
+    box-shadow:0 6px 30px rgba(30,26,16,0.10);
+    padding:36px 30px; max-width:420px; width:100%; overflow:hidden;
   }
-  h1{font-size:20px; margin:0 0 4px;}
-  p.sub{color:var(--sub); font-size:13.5px; margin:0 0 20px; line-height:1.5;}
+  .sparkle{position:absolute; opacity:.5; color:var(--ink);}
+  .sparkle.s1{top:14px; right:22px; font-size:20px;}
+  .sparkle.s2{bottom:18px; left:20px; font-size:14px;}
+  h1{
+    font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700;
+    font-size:32px; margin:0 0 10px; text-align:center; letter-spacing:.01em;
+  }
+  p.sub{color:var(--sub); font-size:15px; margin:0 0 22px; line-height:1.55; text-align:center;}
   select, input{
-    width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--line); font-size:15px;
-    margin-bottom:12px; background:#fafafe;
+    width:100%; padding:12px 14px; border-radius:3px; border:1px solid var(--line); font-size:16px;
+    margin-bottom:12px; background:#fffdf7; font-family:"EB Garamond", Georgia, serif; color:var(--ink);
   }
   button{
-    width:100%; padding:13px 14px; border-radius:12px; border:none; background:var(--accent); color:white;
-    font-size:15px; font-weight:600; cursor:pointer;
+    width:100%; padding:13px 14px; border-radius:3px; border:1px solid var(--accent); background:var(--accent); color:var(--card);
+    font-size:13px; font-weight:600; cursor:pointer; letter-spacing:.12em; text-transform:uppercase;
+    font-family:"EB Garamond", Georgia, serif;
   }
-  button.secondary{background:#f0f1fa; color:var(--accent); margin-top:10px;}
+  button.secondary{background:transparent; color:var(--accent);}
   button:disabled{opacity:.5; cursor:not-allowed;}
-  .msg{font-size:13.5px; padding:12px 14px; border-radius:12px; margin-bottom:12px;}
-  .msg.error{background:#fef2f2; color:#b91c1c;}
-  .msg.info{background:#eef2ff; color:#3730a3;}
+  .msg{font-size:14px; padding:12px 14px; border-radius:3px; margin-bottom:12px; border:1px solid var(--line);}
+  .msg.error{background:#f8ece9; color:#7a2e20; border-color:#e3c6bd;}
+  .msg.info{background:#f1efe4; color:#544f3f;}
   .reveal{
-    text-align:center; padding:22px 14px; border-radius:16px;
-    background:linear-gradient(135deg,var(--accent),#8b8ff0); color:white; margin-top:6px;
+    text-align:center; padding:26px 14px; border-radius:4px;
+    background:var(--accent); color:var(--card); margin-top:6px; border:1px solid var(--accent);
   }
-  .reveal .lbl{font-size:12px; opacity:.85; text-transform:uppercase; letter-spacing:.06em;}
-  .reveal .target{font-size:28px; font-weight:700; margin-top:6px;}
-  .reveal.eliminated{background:linear-gradient(135deg,#6b7280,#9ca3af);}
-  .reveal.won{background:linear-gradient(135deg,#f59e0b,#fbbf24);}
-  .hint{font-size:12px; color:var(--sub); margin-top:14px; text-align:center; line-height:1.5;}
+  .reveal .lbl{font-size:11.5px; opacity:.8; text-transform:uppercase; letter-spacing:.16em;}
+  .reveal .target{font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700; font-size:30px; margin-top:8px;}
+  .reveal.eliminated{background:var(--card); color:var(--ink); border:1px solid var(--line);}
+  .reveal.eliminated .target{color:var(--sub); font-style:normal; font-size:20px;}
+  .reveal.won{background:var(--card); color:var(--ink); border:2px solid var(--accent);}
+  .hint{font-size:12.5px; color:var(--sub); margin-top:16px; text-align:center; line-height:1.6; font-style:italic;}
   .hidden{display:none;}
 </style>
 </head>
 <body>
   <div class="card">
+    <span class="sparkle s1">&#10022;</span>
+    <span class="sparkle s2">&#10022;</span>
     <h1>Sweet 16 Assassin</h1>
     <p class="sub" id="introText">Pick your name to lock in and see who <b>you're</b> hunting. Nobody else - not even Myra - can see this screen, and it only ever shows your own target.</p>
 
@@ -52,15 +68,15 @@
 
     <div id="pickArea">
       <select id="nameSelect"></select>
-      <button id="claimBtn">This is me - show my target</button>
+      <button id="claimBtn">This Is Me &mdash; Show My Target</button>
     </div>
 
     <div id="revealArea" class="reveal hidden">
-      <div class="lbl" id="revealLabel">Your target</div>
+      <div class="lbl" id="revealLabel">Your Target</div>
       <div class="target" id="revealText">-</div>
     </div>
 
-    <button id="killBtn" class="hidden">I got them! 🎯</button>
+    <button id="killBtn" class="hidden">I Got Them</button>
 
     <p class="hint" id="hintText">Keep this to yourself! If you switch phones and lose access, ask Myra to reset your name.</p>
   </div>
@@ -93,7 +109,7 @@
 
       if (result.eliminated) {
         revealArea.classList.add("eliminated");
-        revealLabel.textContent = "You've been eliminated";
+        revealLabel.textContent = "You've Been Eliminated";
         revealText.textContent = result.eliminatedBy ? `by ${result.eliminatedBy}` : "Better luck next time!";
         killBtn.classList.add("hidden");
         hintText.textContent = "Thanks for playing! Stick around to see who wins.";
@@ -102,14 +118,14 @@
 
       if (result.won) {
         revealArea.classList.add("won");
-        revealLabel.textContent = "🏆 You won!";
+        revealLabel.textContent = "✧ You Won ✧";
         revealText.textContent = "You got everyone";
         killBtn.classList.add("hidden");
         hintText.textContent = "Congratulations, Assassin champion!";
         return;
       }
 
-      revealLabel.textContent = "Your target";
+      revealLabel.textContent = "Your Target";
       revealText.textContent = result.targetName;
       killBtn.classList.remove("hidden");
       hintText.textContent = "Keep this to yourself! If you switch phones and lose access, ask Myra to reset your name.";

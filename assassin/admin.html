@@ -4,42 +4,46 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Assassin Setup (Host Only)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-  :root{ --bg:#f5f6fb; --card:#ffffff; --ink:#1c1e2b; --sub:#6b7280; --line:#e8e9f1; --accent:#6366f1; }
+  :root{ --paper:#f3efe2; --card:#faf7ee; --ink:#211f1a; --sub:#6e6a5c; --line:#ded6bf; --accent:#1c1a15; }
   *{box-sizing:border-box;}
   body{
-    margin:0; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:linear-gradient(160deg,#eef1fb 0%, #f7f4fb 100%); color:var(--ink);
+    margin:0; min-height:100vh; font-family:"EB Garamond", Georgia, serif;
+    background:var(--paper); color:var(--ink);
     display:flex; align-items:flex-start; justify-content:center; padding:32px 20px;
   }
   .card{
-    background:var(--card); border-radius:20px; box-shadow:0 4px 24px rgba(30,30,60,0.10);
+    background:var(--card); border:1px solid var(--line); border-radius:6px; box-shadow:0 6px 30px rgba(30,26,16,0.10);
     padding:28px 26px; max-width:520px; width:100%;
   }
-  h1{font-size:20px; margin:0 0 4px;}
-  h2{font-size:15px; margin:22px 0 8px;}
-  p.sub{color:var(--sub); font-size:13.5px; margin:0 0 18px; line-height:1.5;}
-  label{font-size:12.5px; font-weight:600; color:var(--sub); display:block; margin-bottom:4px;}
+  h1{font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700; font-size:24px; margin:0 0 6px;}
+  h2{font-size:14px; margin:24px 0 8px; text-transform:uppercase; letter-spacing:.1em; color:var(--sub); font-weight:600;}
+  p.sub{color:var(--sub); font-size:14.5px; margin:0 0 18px; line-height:1.55;}
+  label{font-size:12.5px; font-weight:600; color:var(--sub); display:block; margin-bottom:4px; letter-spacing:.03em;}
   textarea, input{
-    width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--line); font-size:14px;
-    margin-bottom:14px; background:#fafafe; font-family:inherit;
+    width:100%; padding:12px 14px; border-radius:3px; border:1px solid var(--line); font-size:15px;
+    margin-bottom:14px; background:#fffdf7; font-family:"EB Garamond", Georgia, serif; color:var(--ink);
   }
   textarea{min-height:180px; resize:vertical;}
   .row{display:flex; gap:10px;}
   .row > div{flex:1;}
   button{
-    padding:13px 16px; border-radius:12px; border:none; background:var(--accent); color:white;
-    font-size:14.5px; font-weight:600; cursor:pointer; width:100%;
+    padding:13px 16px; border-radius:3px; border:1px solid var(--accent); background:var(--accent); color:var(--card);
+    font-size:13px; font-weight:600; cursor:pointer; width:100%; letter-spacing:.1em; text-transform:uppercase;
+    font-family:"EB Garamond", Georgia, serif;
   }
-  button.danger{background:#ef4444;}
+  button.danger{background:#7a2e20; border-color:#7a2e20;}
   button:disabled{opacity:.5; cursor:not-allowed;}
-  .msg{font-size:13.5px; padding:12px 14px; border-radius:12px; margin-bottom:14px;}
-  .msg.error{background:#fef2f2; color:#b91c1c;}
-  .msg.info{background:#eef2ff; color:#3730a3;}
-  .msg.success{background:#ecfdf5; color:#065f46;}
+  .msg{font-size:14px; padding:12px 14px; border-radius:3px; margin-bottom:14px; border:1px solid var(--line);}
+  .msg.error{background:#f8ece9; color:#7a2e20; border-color:#e3c6bd;}
+  .msg.info{background:#f1efe4; color:#544f3f;}
+  .msg.success{background:#eef1e6; color:#3d4a2f; border-color:#cdd8bd;}
   .link-box{
-    font-size:13px; background:#fafafe; border:1px dashed var(--line); border-radius:10px; padding:10px 12px;
-    word-break:break-all; margin-bottom:14px;
+    font-size:13px; background:#fffdf7; border:1px dashed var(--line); border-radius:3px; padding:10px 12px;
+    word-break:break-all; margin-bottom:14px; font-family:"EB Garamond", Georgia, serif;
   }
   .hidden{display:none;}
   .gate{max-width:340px;}
