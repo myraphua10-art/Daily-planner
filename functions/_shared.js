@@ -7,10 +7,16 @@ export function json(data, status = 200) {
   });
 }
 
+// Falls back to a hardcoded passcode if the ADMIN_PASSCODE secret isn't
+// configured on the Worker (e.g. dashboard secret setup didn't take), so
+// the admin gate keeps working without depending on that being right.
+// Change FALLBACK_PASSCODE to something private before sharing this repo further.
+const FALLBACK_PASSCODE = "sweet16myra";
+
 export function requireAdmin(request, env) {
   const provided = (request.headers.get("x-admin-passcode") || "").trim();
-  const expected = (env.ADMIN_PASSCODE || "").trim();
-  return Boolean(expected) && provided === expected;
+  const expected = (env.ADMIN_PASSCODE || FALLBACK_PASSCODE).trim();
+  return provided === expected;
 }
 
 export async function getGame(env) {
