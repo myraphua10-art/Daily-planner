@@ -27,7 +27,6 @@
     font-size:15px; font-weight:600; cursor:pointer;
   }
   button:disabled{opacity:.5; cursor:not-allowed;}
-  button.secondary{background:none; color:var(--accent); font-weight:600; margin-top:8px;}
   .msg{font-size:13.5px; padding:12px 14px; border-radius:12px; margin-bottom:12px;}
   .msg.error{background:#fef2f2; color:#b91c1c;}
   .msg.info{background:#eef2ff; color:#3730a3;}
@@ -62,7 +61,8 @@
   </div>
 
   <script type="module">
-    import { whenReady, getGame, assignmentDocRef, getDoc, updateDoc } from "./firebase.js";
+    const STORAGE_NAME = "assassin_claimed_name";
+    const STORAGE_TOKEN = "assassin_claim_token";
 
     const msgArea = document.getElementById("msgArea");
     const pickArea = document.getElementById("pickArea");
@@ -81,13 +81,19 @@
       targetNameEl.textContent = name;
     }
 
-    const STORAGE_KEY = "assassin_claimed_name";
+    async function fetchTarget(name, token) {
+      const headers = token ? { "x-claim-token": token } : {};
+      const res = await fetch(`/api/target?name=${encodeURIComponent(name)}`, { headers });
+      const data = await res.json();
+      if (!res.ok) return { error: data.error || "error" };
+      return data;
+    }
 
     async function main() {
-      const user = await whenReady();
-      const game = await getGame();
+      const res = await fetch("/api/game");
+      const game = await res.json();
 
-      if (!game || !game.locked) {
+      if (!game.locked) {
         showMessage("Targets haven't been generated yet - check back closer to the party!", "info");
         pickArea.classList.add("hidden");
         return;
@@ -99,11 +105,12 @@
         .map((p) => `<option value="${p}">${p}</option>`)
         .join("");
 
-      const savedName = localStorage.getItem(STORAGE_KEY);
-      if (savedName && game.players.includes(savedName)) {
-        const snap = await getDoc(assignmentDocRef(savedName));
-        if (snap.exists() && snap.data().ownerUid === user.uid) {
-          showTarget(snap.data().targetName);
+      const savedName = localStorage.getItem(STORAGE_NAME);
+      const savedToken = localStorage.getItem(STORAGE_TOKEN);
+      if (savedName && savedToken && game.players.includes(savedName)) {
+        const result = await fetchTarget(savedName, savedToken);
+        if (result.targetName) {
+          showTarget(result.targetName);
           return;
         }
       }
@@ -112,25 +119,21 @@
         const name = nameSelect.value;
         claimBtn.disabled = true;
         try {
-          const ref = assignmentDocRef(name);
-          const snap = await getDoc(ref);
-          if (!snap.exists()) {
-            showMessage("That name isn't set up yet - ask Myra.", "error");
-            return;
-          }
-          const data = snap.data();
-          if (data.ownerUid && data.ownerUid !== user.uid) {
+          const result = await fetchTarget(name, null);
+          if (result.error === "already-claimed") {
             showMessage(
               `"${name}" has already been claimed on another device. If that was you on a different phone, ask Myra to reset it.`,
               "error"
             );
             return;
           }
-          if (!data.ownerUid) {
-            await updateDoc(ref, { ownerUid: user.uid, claimedAt: Date.now() });
+          if (result.error) {
+            showMessage("Something went wrong. Try again in a moment.", "error");
+            return;
           }
-          localStorage.setItem(STORAGE_KEY, name);
-          showTarget(data.targetName);
+          localStorage.setItem(STORAGE_NAME, name);
+          localStorage.setItem(STORAGE_TOKEN, result.claimToken);
+          showTarget(result.targetName);
         } catch (e) {
           console.error(e);
           showMessage("Something went wrong. Try again in a moment.", "error");

@@ -57,7 +57,7 @@
 
   <div id="panel" class="card hidden">
     <h1>Assassin - Host Setup</h1>
-    <p class="sub">Edit the guest list below, then generate the loop. Once generated, targets are locked in and this page will <b>never</b> display who is hunting whom - only guests see their own single target, on the reveal page.</p>
+    <p class="sub">Edit the guest list below, then generate the loop. The loop is generated on the server, not in this browser - once generated, targets are locked in and this page will <b>never</b> display who is hunting whom, only guests see their own single target on the reveal page.</p>
 
     <div id="statusArea"></div>
 
@@ -78,7 +78,7 @@
     <button id="saveListBtn">Save guest list</button>
 
     <h2>Generate &amp; lock</h2>
-    <p class="sub">Irreversible - once locked, the guest list can't change. This creates every target assignment at once; the results are written straight to the database and are never shown on screen, including here.</p>
+    <p class="sub">Irreversible - once locked, the guest list can't change. This creates every target assignment at once on the server; the results are never sent back to this page.</p>
     <button id="generateBtn">Generate &amp; lock game</button>
 
     <div id="linkSection" class="hidden">
@@ -95,17 +95,12 @@
   </div>
 
   <script type="module">
-    import { generateAssassinCycle, slugify } from "./game-logic.js";
-    import { whenReady, db, doc, getDoc, setDoc, updateDoc, gameDocRef, assignmentDocRef } from "./firebase.js";
-
-    // Change this before sharing the repo/site publicly. This only gates
-    // access to the setup screen - it is not related to how targets are hidden.
-    const HOST_PASSCODE = "changeme";
-
     const DEFAULT_PLAYERS = [
       "Isabelle", "Adia", "Myra", "Rainie", "Elizabeth", "Charice", "Nicole",
       "Jayna", "Violet", "Ana", "Laetitia", "Katelyn", "Qingyang",
     ];
+
+    let adminPasscode = "";
 
     const gate = document.getElementById("gate");
     const panel = document.getElementById("panel");
@@ -121,37 +116,54 @@
       statusArea.innerHTML = `<div class="msg ${type}">${text}</div>`;
     }
 
+    function adminHeaders(extra = {}) {
+      return { "x-admin-passcode": adminPasscode, ...extra };
+    }
+
     document.getElementById("unlockBtn").addEventListener("click", async () => {
       const val = document.getElementById("passcode").value;
-      if (val !== HOST_PASSCODE) {
-        gateMsg.innerHTML = `<div class="msg error">Wrong passcode.</div>`;
+      try {
+        const res = await fetch("/api/admin-check", {
+          method: "POST",
+          headers: { "x-admin-passcode": val },
+        });
+        if (!res.ok) {
+          gateMsg.innerHTML = `<div class="msg error">Wrong passcode.</div>`;
+          return;
+        }
+      } catch (e) {
+        gateMsg.innerHTML = `<div class="msg error">Couldn't reach the server. Check your connection.</div>`;
         return;
       }
+      adminPasscode = val;
       gate.classList.add("hidden");
       panel.classList.remove("hidden");
       await init();
     });
 
     async function init() {
-      await whenReady();
-      const snap = await getDoc(gameDocRef());
-      const game = snap.exists() ? snap.data() : null;
+      const res = await fetch("/api/game");
+      const game = await res.json();
 
-      playersInput.value = (game?.players ?? DEFAULT_PLAYERS).join("\n");
-      hunterInput.value = game?.riggedHunter ?? "Jayna";
-      targetInput.value = game?.riggedTarget ?? "Myra";
+      playersInput.value = (game.players?.length ? game.players : DEFAULT_PLAYERS).join("\n");
+      hunterInput.value = game.riggedHunter || "Jayna";
+      targetInput.value = game.riggedTarget || "Myra";
 
-      if (game?.locked) {
+      if (game.locked) {
         showStatus("Game is locked. Targets have been generated and links are live.", "success");
         showLink();
-        playersInput.disabled = true;
-        hunterInput.disabled = true;
-        targetInput.disabled = true;
-        document.getElementById("saveListBtn").disabled = true;
-        document.getElementById("generateBtn").disabled = true;
+        setEditingDisabled(true);
       } else {
         showStatus("Game not generated yet. Edit the list, then generate when ready.", "info");
       }
+    }
+
+    function setEditingDisabled(disabled) {
+      playersInput.disabled = disabled;
+      hunterInput.disabled = disabled;
+      targetInput.disabled = disabled;
+      document.getElementById("saveListBtn").disabled = disabled;
+      document.getElementById("generateBtn").disabled = disabled;
     }
 
     function showLink() {
@@ -171,12 +183,17 @@
       try {
         const players = currentPlayers();
         if (players.length < 3) throw new Error("Need at least 3 players.");
-        await setDoc(gameDocRef(), {
-          players,
-          riggedHunter: hunterInput.value.trim(),
-          riggedTarget: targetInput.value.trim(),
-          locked: false,
-        }, { merge: true });
+        const res = await fetch("/api/game", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({
+            players,
+            riggedHunter: hunterInput.value.trim(),
+            riggedTarget: targetInput.value.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to save.");
         showStatus("Guest list saved.", "success");
       } catch (e) {
         showStatus(e.message, "error");
@@ -185,40 +202,35 @@
 
     document.getElementById("generateBtn").addEventListener("click", async () => {
       const players = currentPlayers();
-      const riggedHunter = hunterInput.value.trim();
-      const riggedTarget = targetInput.value.trim();
 
       if (!confirm(
         `Lock in ${players.length} players now? This can't be undone, and even you won't be able to see the results afterward - only each person's own reveal page.`
       )) return;
 
       try {
-        const assignments = generateAssassinCycle(players, riggedHunter, riggedTarget);
+        // Make sure the latest edits are saved before generating.
+        const saveRes = await fetch("/api/game", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({
+            players,
+            riggedHunter: hunterInput.value.trim(),
+            riggedTarget: targetInput.value.trim(),
+          }),
+        });
+        const saveData = await saveRes.json();
+        if (!saveRes.ok) throw new Error(saveData.error || "Failed to save guest list.");
 
-        await setDoc(gameDocRef(), {
-          players,
-          riggedHunter,
-          riggedTarget,
-          locked: false,
-        }, { merge: true });
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: adminHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to generate.");
 
-        for (const [hunter, target] of Object.entries(assignments)) {
-          await setDoc(assignmentDocRef(hunter), {
-            targetName: target,
-            ownerUid: null,
-            claimedAt: null,
-          });
-        }
-
-        await updateDoc(gameDocRef(), { locked: true });
-
-        showStatus(`Locked in! ${players.length} targets generated.`, "success");
+        showStatus(`Locked in! ${data.count} targets generated.`, "success");
         showLink();
-        playersInput.disabled = true;
-        hunterInput.disabled = true;
-        targetInput.disabled = true;
-        document.getElementById("saveListBtn").disabled = true;
-        document.getElementById("generateBtn").disabled = true;
+        setEditingDisabled(true);
       } catch (e) {
         console.error(e);
         showStatus(e.message, "error");
@@ -229,10 +241,13 @@
       const name = document.getElementById("resetNameInput").value.trim();
       if (!name) return;
       try {
-        const ref = assignmentDocRef(name);
-        const snap = await getDoc(ref);
-        if (!snap.exists()) throw new Error("No such player.");
-        await updateDoc(ref, { ownerUid: null, claimedAt: null });
+        const res = await fetch("/api/reset", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to reset.");
         showStatus(`Reset "${name}" - they can claim their name again on a new device.`, "success");
         document.getElementById("resetNameInput").value = "";
       } catch (e) {
