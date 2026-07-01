@@ -31,3 +31,21 @@ export async function putGame(env, game) {
 export function assignKey(name) {
   return `assign:${slugify(name)}`;
 }
+
+export function photoKey(name) {
+  return `photo:${slugify(name)}`;
+}
+
+// Shared shape for a hunter's reveal, whether they just claimed their name
+// or are revisiting. Looks up the current target's photo (if that person has
+// uploaded one yet) fresh each time, so it stays current as the chain shifts.
+export async function buildReveal(env, record, token) {
+  if (record.status === "eliminated") {
+    return { eliminated: true, eliminatedBy: record.eliminatedBy, claimToken: token };
+  }
+  if (record.status === "won") {
+    return { won: true, claimToken: token };
+  }
+  const targetPhoto = await env.ASSASSIN_KV.get(photoKey(record.targetName));
+  return { targetName: record.targetName, targetPhoto: targetPhoto || null, claimToken: token };
+}

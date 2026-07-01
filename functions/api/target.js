@@ -1,9 +1,10 @@
-import { json, getGame, assignKey } from "../_shared.js";
+import { json, getGame, assignKey, buildReveal } from "../_shared.js";
 
-// Guest-facing. First call for a name claims it for this device (returns a
-// fresh claim token to store locally). Later calls must present that same
-// token to read the target again - anyone else, or a request without the
-// right token, is rejected before the target is ever included in a response.
+// Guest-facing. Only works for a name that's already been claimed (via
+// /api/claim, which also collects the guest's own photo) - the caller must
+// present the same token they got back from that claim. Anyone else, or a
+// request without the right token, is rejected before the target is ever
+// included in a response.
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const name = url.searchParams.get("name");
@@ -18,28 +19,14 @@ export async function onRequestGet({ request, env }) {
   if (!raw) return json({ error: "Unknown player." }, 404);
   const record = JSON.parse(raw);
 
-  const providedToken = request.headers.get("x-claim-token") || "";
-
-  function reveal(token) {
-    if (record.status === "eliminated") {
-      return { eliminated: true, eliminatedBy: record.eliminatedBy, claimToken: token };
-    }
-    if (record.status === "won") {
-      return { won: true, claimToken: token };
-    }
-    return { targetName: record.targetName, claimToken: token };
-  }
-
   if (!record.ownerToken) {
-    const token = crypto.randomUUID();
-    record.ownerToken = token;
-    record.claimedAt = Date.now();
-    await env.ASSASSIN_KV.put(key, JSON.stringify(record));
-    return json(reveal(token));
+    return json({ error: "not-claimed" }, 400);
   }
 
-  if (providedToken && providedToken === record.ownerToken) {
-    return json(reveal(record.ownerToken));
+  const providedToken = request.headers.get("x-claim-token") || "";
+  if (providedToken === record.ownerToken) {
+    const reveal = await buildReveal(env, record, record.ownerToken);
+    return json(reveal);
   }
 
   return json({ error: "already-claimed" }, 409);
