@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assassin Setup (Host Only)</title>
+<style>
+  :root{ --bg:#f5f6fb; --card:#ffffff; --ink:#1c1e2b; --sub:#6b7280; --line:#e8e9f1; --accent:#6366f1; }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(160deg,#eef1fb 0%, #f7f4fb 100%); color:var(--ink);
+    display:flex; align-items:flex-start; justify-content:center; padding:32px 20px;
+  }
+  .card{
+    background:var(--card); border-radius:20px; box-shadow:0 4px 24px rgba(30,30,60,0.10);
+    padding:28px 26px; max-width:520px; width:100%;
+  }
+  h1{font-size:20px; margin:0 0 4px;}
+  h2{font-size:15px; margin:22px 0 8px;}
+  p.sub{color:var(--sub); font-size:13.5px; margin:0 0 18px; line-height:1.5;}
+  label{font-size:12.5px; font-weight:600; color:var(--sub); display:block; margin-bottom:4px;}
+  textarea, input{
+    width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--line); font-size:14px;
+    margin-bottom:14px; background:#fafafe; font-family:inherit;
+  }
+  textarea{min-height:180px; resize:vertical;}
+  .row{display:flex; gap:10px;}
+  .row > div{flex:1;}
+  button{
+    padding:13px 16px; border-radius:12px; border:none; background:var(--accent); color:white;
+    font-size:14.5px; font-weight:600; cursor:pointer; width:100%;
+  }
+  button.danger{background:#ef4444;}
+  button:disabled{opacity:.5; cursor:not-allowed;}
+  .msg{font-size:13.5px; padding:12px 14px; border-radius:12px; margin-bottom:14px;}
+  .msg.error{background:#fef2f2; color:#b91c1c;}
+  .msg.info{background:#eef2ff; color:#3730a3;}
+  .msg.success{background:#ecfdf5; color:#065f46;}
+  .link-box{
+    font-size:13px; background:#fafafe; border:1px dashed var(--line); border-radius:10px; padding:10px 12px;
+    word-break:break-all; margin-bottom:14px;
+  }
+  .hidden{display:none;}
+  .gate{max-width:340px;}
+</style>
+</head>
+<body>
+  <div id="gate" class="card gate">
+    <h1>Host access</h1>
+    <p class="sub">This page is for Myra only. Guests should never see this - it never shows the full list of who's hunting whom, not even to you, but it can generate and reset the game.</p>
+    <label for="passcode">Host passcode</label>
+    <input type="password" id="passcode" placeholder="Enter passcode">
+    <button id="unlockBtn">Continue</button>
+    <div id="gateMsg"></div>
+  </div>
+
+  <div id="panel" class="card hidden">
+    <h1>Assassin - Host Setup</h1>
+    <p class="sub">Edit the guest list below, then generate the loop. Once generated, targets are locked in and this page will <b>never</b> display who is hunting whom - only guests see their own single target, on the reveal page.</p>
+
+    <div id="statusArea"></div>
+
+    <h2>Guest list (one name per line)</h2>
+    <textarea id="playersInput"></textarea>
+
+    <div class="row">
+      <div>
+        <label for="hunterInput">Rigged hunter</label>
+        <input type="text" id="hunterInput" value="Jayna">
+      </div>
+      <div>
+        <label for="targetInput">Rigged target</label>
+        <input type="text" id="targetInput" value="Myra">
+      </div>
+    </div>
+
+    <button id="saveListBtn">Save guest list</button>
+
+    <h2>Generate &amp; lock</h2>
+    <p class="sub">Irreversible - once locked, the guest list can't change. This creates every target assignment at once; the results are written straight to the database and are never shown on screen, including here.</p>
+    <button id="generateBtn">Generate &amp; lock game</button>
+
+    <div id="linkSection" class="hidden">
+      <h2>Share this link with everyone</h2>
+      <div class="link-box" id="guestLink"></div>
+    </div>
+
+    <h2>Reset a claim</h2>
+    <p class="sub">If someone switches phones and loses access to their own reveal, type their exact name to let them claim it again on the new device. This does not show you their target.</p>
+    <div class="row">
+      <div><input type="text" id="resetNameInput" placeholder="Exact name"></div>
+    </div>
+    <button id="resetBtn" class="danger">Reset this person's claim</button>
+  </div>
+
+  <script type="module">
+    import { generateAssassinCycle, slugify } from "./game-logic.js";
+    import { whenReady, db, doc, getDoc, setDoc, updateDoc, gameDocRef, assignmentDocRef } from "./firebase.js";
+
+    // Change this before sharing the repo/site publicly. This only gates
+    // access to the setup screen - it is not related to how targets are hidden.
+    const HOST_PASSCODE = "changeme";
+
+    const DEFAULT_PLAYERS = [
+      "Isabelle", "Adia", "Myra", "Rainie", "Elizabeth", "Charice", "Nicole",
+      "Jayna", "Violet", "Ana", "Laetitia", "Katelyn", "Qingyang",
+    ];
+
+    const gate = document.getElementById("gate");
+    const panel = document.getElementById("panel");
+    const gateMsg = document.getElementById("gateMsg");
+    const statusArea = document.getElementById("statusArea");
+    const playersInput = document.getElementById("playersInput");
+    const hunterInput = document.getElementById("hunterInput");
+    const targetInput = document.getElementById("targetInput");
+    const linkSection = document.getElementById("linkSection");
+    const guestLink = document.getElementById("guestLink");
+
+    function showStatus(text, type = "info") {
+      statusArea.innerHTML = `<div class="msg ${type}">${text}</div>`;
+    }
+
+    document.getElementById("unlockBtn").addEventListener("click", async () => {
+      const val = document.getElementById("passcode").value;
+      if (val !== HOST_PASSCODE) {
+        gateMsg.innerHTML = `<div class="msg error">Wrong passcode.</div>`;
+        return;
+      }
+      gate.classList.add("hidden");
+      panel.classList.remove("hidden");
+      await init();
+    });
+
+    async function init() {
+      await whenReady();
+      const snap = await getDoc(gameDocRef());
+      const game = snap.exists() ? snap.data() : null;
+
+      playersInput.value = (game?.players ?? DEFAULT_PLAYERS).join("\n");
+      hunterInput.value = game?.riggedHunter ?? "Jayna";
+      targetInput.value = game?.riggedTarget ?? "Myra";
+
+      if (game?.locked) {
+        showStatus("Game is locked. Targets have been generated and links are live.", "success");
+        showLink();
+        playersInput.disabled = true;
+        hunterInput.disabled = true;
+        targetInput.disabled = true;
+        document.getElementById("saveListBtn").disabled = true;
+        document.getElementById("generateBtn").disabled = true;
+      } else {
+        showStatus("Game not generated yet. Edit the list, then generate when ready.", "info");
+      }
+    }
+
+    function showLink() {
+      const url = new URL("./index.html", window.location.href).toString();
+      guestLink.textContent = url;
+      linkSection.classList.remove("hidden");
+    }
+
+    function currentPlayers() {
+      return playersInput.value
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    document.getElementById("saveListBtn").addEventListener("click", async () => {
+      try {
+        const players = currentPlayers();
+        if (players.length < 3) throw new Error("Need at least 3 players.");
+        await setDoc(gameDocRef(), {
+          players,
+          riggedHunter: hunterInput.value.trim(),
+          riggedTarget: targetInput.value.trim(),
+          locked: false,
+        }, { merge: true });
+        showStatus("Guest list saved.", "success");
+      } catch (e) {
+        showStatus(e.message, "error");
+      }
+    });
+
+    document.getElementById("generateBtn").addEventListener("click", async () => {
+      const players = currentPlayers();
+      const riggedHunter = hunterInput.value.trim();
+      const riggedTarget = targetInput.value.trim();
+
+      if (!confirm(
+        `Lock in ${players.length} players now? This can't be undone, and even you won't be able to see the results afterward - only each person's own reveal page.`
+      )) return;
+
+      try {
+        const assignments = generateAssassinCycle(players, riggedHunter, riggedTarget);
+
+        await setDoc(gameDocRef(), {
+          players,
+          riggedHunter,
+          riggedTarget,
+          locked: false,
+        }, { merge: true });
+
+        for (const [hunter, target] of Object.entries(assignments)) {
+          await setDoc(assignmentDocRef(hunter), {
+            targetName: target,
+            ownerUid: null,
+            claimedAt: null,
+          });
+        }
+
+        await updateDoc(gameDocRef(), { locked: true });
+
+        showStatus(`Locked in! ${players.length} targets generated.`, "success");
+        showLink();
+        playersInput.disabled = true;
+        hunterInput.disabled = true;
+        targetInput.disabled = true;
+        document.getElementById("saveListBtn").disabled = true;
+        document.getElementById("generateBtn").disabled = true;
+      } catch (e) {
+        console.error(e);
+        showStatus(e.message, "error");
+      }
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", async () => {
+      const name = document.getElementById("resetNameInput").value.trim();
+      if (!name) return;
+      try {
+        const ref = assignmentDocRef(name);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) throw new Error("No such player.");
+        await updateDoc(ref, { ownerUid: null, claimedAt: null });
+        showStatus(`Reset "${name}" - they can claim their name again on a new device.`, "success");
+        document.getElementById("resetNameInput").value = "";
+      } catch (e) {
+        showStatus(e.message, "error");
+      }
+    });
+  </script>
+</body>
+</html>

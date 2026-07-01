@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Myra's Sweet 16 - Assassin</title>
+<style>
+  :root{ --bg:#f5f6fb; --card:#ffffff; --ink:#1c1e2b; --sub:#6b7280; --line:#e8e9f1; --accent:#6366f1; }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(160deg,#eef1fb 0%, #f7f4fb 100%); color:var(--ink);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .card{
+    background:var(--card); border-radius:20px; box-shadow:0 4px 24px rgba(30,30,60,0.10);
+    padding:28px 24px; max-width:420px; width:100%;
+  }
+  h1{font-size:20px; margin:0 0 4px;}
+  p.sub{color:var(--sub); font-size:13.5px; margin:0 0 20px; line-height:1.5;}
+  select, input{
+    width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--line); font-size:15px;
+    margin-bottom:12px; background:#fafafe;
+  }
+  button{
+    width:100%; padding:13px 14px; border-radius:12px; border:none; background:var(--accent); color:white;
+    font-size:15px; font-weight:600; cursor:pointer;
+  }
+  button:disabled{opacity:.5; cursor:not-allowed;}
+  button.secondary{background:none; color:var(--accent); font-weight:600; margin-top:8px;}
+  .msg{font-size:13.5px; padding:12px 14px; border-radius:12px; margin-bottom:12px;}
+  .msg.error{background:#fef2f2; color:#b91c1c;}
+  .msg.info{background:#eef2ff; color:#3730a3;}
+  .reveal{
+    text-align:center; padding:22px 14px; border-radius:16px;
+    background:linear-gradient(135deg,var(--accent),#8b8ff0); color:white; margin-top:6px;
+  }
+  .reveal .lbl{font-size:12px; opacity:.85; text-transform:uppercase; letter-spacing:.06em;}
+  .reveal .target{font-size:28px; font-weight:700; margin-top:6px;}
+  .hint{font-size:12px; color:var(--sub); margin-top:14px; text-align:center; line-height:1.5;}
+  .hidden{display:none;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sweet 16 Assassin</h1>
+    <p class="sub">Pick your name to lock in and see who <b>you're</b> hunting. Nobody else - not even Myra - can see this screen, and it only ever shows your own target.</p>
+
+    <div id="msgArea"></div>
+
+    <div id="pickArea">
+      <select id="nameSelect"></select>
+      <button id="claimBtn">This is me - show my target</button>
+    </div>
+
+    <div id="revealArea" class="reveal hidden">
+      <div class="lbl">Your target</div>
+      <div class="target" id="targetName">-</div>
+    </div>
+
+    <p class="hint">Keep this to yourself! If you switch phones and lose access, ask Myra to reset your name.</p>
+  </div>
+
+  <script type="module">
+    import { whenReady, getGame, assignmentDocRef, getDoc, updateDoc } from "./firebase.js";
+
+    const msgArea = document.getElementById("msgArea");
+    const pickArea = document.getElementById("pickArea");
+    const nameSelect = document.getElementById("nameSelect");
+    const claimBtn = document.getElementById("claimBtn");
+    const revealArea = document.getElementById("revealArea");
+    const targetNameEl = document.getElementById("targetName");
+
+    function showMessage(text, type = "info") {
+      msgArea.innerHTML = `<div class="msg ${type}">${text}</div>`;
+    }
+
+    function showTarget(name) {
+      pickArea.classList.add("hidden");
+      revealArea.classList.remove("hidden");
+      targetNameEl.textContent = name;
+    }
+
+    const STORAGE_KEY = "assassin_claimed_name";
+
+    async function main() {
+      const user = await whenReady();
+      const game = await getGame();
+
+      if (!game || !game.locked) {
+        showMessage("Targets haven't been generated yet - check back closer to the party!", "info");
+        pickArea.classList.add("hidden");
+        return;
+      }
+
+      nameSelect.innerHTML = game.players
+        .slice()
+        .sort((a, b) => a.localeCompare(b))
+        .map((p) => `<option value="${p}">${p}</option>`)
+        .join("");
+
+      const savedName = localStorage.getItem(STORAGE_KEY);
+      if (savedName && game.players.includes(savedName)) {
+        const snap = await getDoc(assignmentDocRef(savedName));
+        if (snap.exists() && snap.data().ownerUid === user.uid) {
+          showTarget(snap.data().targetName);
+          return;
+        }
+      }
+
+      claimBtn.addEventListener("click", async () => {
+        const name = nameSelect.value;
+        claimBtn.disabled = true;
+        try {
+          const ref = assignmentDocRef(name);
+          const snap = await getDoc(ref);
+          if (!snap.exists()) {
+            showMessage("That name isn't set up yet - ask Myra.", "error");
+            return;
+          }
+          const data = snap.data();
+          if (data.ownerUid && data.ownerUid !== user.uid) {
+            showMessage(
+              `"${name}" has already been claimed on another device. If that was you on a different phone, ask Myra to reset it.`,
+              "error"
+            );
+            return;
+          }
+          if (!data.ownerUid) {
+            await updateDoc(ref, { ownerUid: user.uid, claimedAt: Date.now() });
+          }
+          localStorage.setItem(STORAGE_KEY, name);
+          showTarget(data.targetName);
+        } catch (e) {
+          console.error(e);
+          showMessage("Something went wrong. Try again in a moment.", "error");
+        } finally {
+          claimBtn.disabled = false;
+        }
+      });
+    }
+
+    main().catch((e) => {
+      console.error(e);
+      showMessage("Couldn't load the game. Check your connection and refresh.", "error");
+    });
+  </script>
+</body>
+</html>

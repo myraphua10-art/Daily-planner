@@ -1,0 +1,43 @@
+rules_version = '2';
+
+// Paste this into: Firebase Console -> Firestore Database -> Rules -> Publish.
+//
+// Security model (good for a casual party game among friends, not a
+// bulletproof system against a determined attacker):
+//  - Anyone can read/write the top-level game doc (guest list, locked flag,
+//    rigged hunter/target names). It never contains anyone's actual target,
+//    so there's nothing secret to leak there.
+//  - Each assignment doc (one per player, holding that player's target) can
+//    only be READ by the device (anonymous auth uid) that first claimed it.
+//    Nobody can browse someone else's target, including other guests.
+//  - An unclaimed assignment doc can be claimed once (ownerUid: null -> uid).
+//  - Any signed-in device can reset a claim back to unclaimed (ownerUid ->
+//    null) - used by the host's "reset a claim" button when someone switches
+//    phones. This never exposes targetName, only clears ownership.
+//  - New assignment docs can only be created while the game is unlocked,
+//    which happens once, from admin.html, right before locking.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /games/{gameId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /games/{gameId}/assignments/{playerId} {
+      allow read: if request.auth != null
+                   && resource.data.ownerUid == request.auth.uid;
+
+      allow create: if request.auth != null
+                     && get(/databases/$(database)/documents/games/$(gameId)).data.locked != true;
+
+      allow update: if request.auth != null && (
+        (resource.data.ownerUid == null
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.targetName == resource.data.targetName)
+        ||
+        (request.resource.data.ownerUid == null
+          && request.resource.data.targetName == resource.data.targetName)
+      );
+    }
+  }
+}
