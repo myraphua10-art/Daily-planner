@@ -96,6 +96,13 @@
       <div><input type="text" id="resetNameInput" placeholder="Exact name"></div>
     </div>
     <button id="resetBtn" class="danger">Reset this person's claim</button>
+
+    <h2>Undo an accidental elimination</h2>
+    <p class="sub">If someone mis-tapped "I Got Them" on a person they hadn't actually gotten, type that person's exact name to put them back in the game. Only works if their hunter hasn't gone on to eliminate anyone else since.</p>
+    <div class="row">
+      <div><input type="text" id="undoNameInput" placeholder="Exact name of the person eliminated by mistake"></div>
+    </div>
+    <button id="undoBtn" class="danger">Undo this elimination</button>
   </div>
 
   <script type="module">
@@ -261,6 +268,24 @@
         if (!res.ok) throw new Error(data.error || "Failed to reset.");
         showStatus(`Reset "${name}" - they can claim their name again on a new device.`, "success");
         document.getElementById("resetNameInput").value = "";
+      } catch (e) {
+        showStatus(e.message, "error");
+      }
+    });
+
+    document.getElementById("undoBtn").addEventListener("click", async () => {
+      const name = document.getElementById("undoNameInput").value.trim();
+      if (!name) return;
+      try {
+        const res = await fetch("/api/undo-eliminate", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to undo.");
+        showStatus(`"${name}" is back in the game.`, "success");
+        document.getElementById("undoNameInput").value = "";
       } catch (e) {
         showStatus(e.message, "error");
       }

@@ -5,6 +5,7 @@ import { onRequestPost as resetPost } from "../functions/api/reset.js";
 import { onRequestPost as adminCheckPost } from "../functions/api/admin-check.js";
 import { onRequestPost as eliminatePost } from "../functions/api/eliminate.js";
 import { onRequestPost as claimPost } from "../functions/api/claim.js";
+import { onRequestPost as undoEliminatePost } from "../functions/api/undo-eliminate.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -15,6 +16,7 @@ const routes = {
   "POST /api/admin-check": adminCheckPost,
   "POST /api/eliminate": eliminatePost,
   "POST /api/claim": claimPost,
+  "POST /api/undo-eliminate": undoEliminatePost,
 };
 
 export default {
