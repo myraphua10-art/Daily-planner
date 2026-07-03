@@ -111,6 +111,14 @@
 
     <button id="killBtn" class="kill-btn hidden">I Got Them</button>
 
+    <div id="proofArea" class="hidden">
+      <p class="sub">Attach a photo proof of the catch &mdash; required, and it's how Myra picks who gets bonus gifts!</p>
+      <img id="proofPreview" class="photo-preview" alt="">
+      <input type="file" id="proofInput" accept="image/*" capture="environment">
+      <button id="submitProofBtn" disabled>Confirm Elimination</button>
+      <button id="cancelProofBtn" class="secondary">Cancel</button>
+    </div>
+
     <p class="hint" id="hintText">Keep this to yourself! If you switch phones and lose access, ask Myra to reset your name.</p>
 
     <p class="tagline">This game will be the death of you....</p>
@@ -152,11 +160,17 @@
     const revealText = document.getElementById("revealText");
     const dossierPhoto = document.getElementById("dossierPhoto");
     const killBtn = document.getElementById("killBtn");
+    const proofArea = document.getElementById("proofArea");
+    const proofInput = document.getElementById("proofInput");
+    const proofPreview = document.getElementById("proofPreview");
+    const submitProofBtn = document.getElementById("submitProofBtn");
+    const cancelProofBtn = document.getElementById("cancelProofBtn");
     const hintText = document.getElementById("hintText");
 
     let currentName = null;
     let currentToken = null;
     let pendingPhotoDataUrl = null;
+    let pendingProofDataUrl = null;
 
     function showMessage(text, type = "info") {
       msgArea.innerHTML = `<div class="msg ${type}">${text}</div>`;
@@ -166,6 +180,7 @@
       introText.classList.add("hidden");
       pickArea.classList.add("hidden");
       photoArea.classList.add("hidden");
+      proofArea.classList.add("hidden");
       revealArea.classList.remove("hidden");
       revealArea.classList.remove("eliminated", "won");
 
@@ -338,20 +353,50 @@
         }
       });
 
-      killBtn.addEventListener("click", async () => {
-        if (!confirm(`Confirm you actually eliminated ${revealText.textContent}? This can't be undone.`)) return;
-        killBtn.disabled = true;
+      killBtn.addEventListener("click", () => {
+        killBtn.classList.add("hidden");
+        proofArea.classList.remove("hidden");
+      });
+
+      cancelProofBtn.addEventListener("click", () => {
+        pendingProofDataUrl = null;
+        proofInput.value = "";
+        proofPreview.classList.remove("shown");
+        submitProofBtn.disabled = true;
+        proofArea.classList.add("hidden");
+        killBtn.classList.remove("hidden");
+      });
+
+      proofInput.addEventListener("change", async () => {
+        const file = proofInput.files[0];
+        if (!file) return;
+        try {
+          pendingProofDataUrl = await resizeImage(file);
+          proofPreview.src = pendingProofDataUrl;
+          proofPreview.classList.add("shown");
+          submitProofBtn.disabled = false;
+        } catch (e) {
+          console.error(e);
+          showMessage("Couldn't read that photo. Try a different one.", "error");
+        }
+      });
+
+      submitProofBtn.addEventListener("click", async () => {
+        if (!pendingProofDataUrl) return;
+        submitProofBtn.disabled = true;
         try {
           const res = await fetch("/api/eliminate", {
             method: "POST",
             headers: { "x-claim-token": currentToken, "content-type": "application/json" },
-            body: JSON.stringify({ name: currentName }),
+            body: JSON.stringify({ name: currentName, proofPhotoDataUrl: pendingProofDataUrl }),
           });
           const data = await res.json();
           if (!res.ok) {
             showMessage(data.error || "Something went wrong.", "error");
+            submitProofBtn.disabled = false;
             return;
           }
+          proofArea.classList.add("hidden");
           if (data.won) {
             renderResult({ won: true });
           } else {
@@ -361,8 +406,7 @@
         } catch (e) {
           console.error(e);
           showMessage("Something went wrong. Try again in a moment.", "error");
-        } finally {
-          killBtn.disabled = false;
+          submitProofBtn.disabled = false;
         }
       });
     }

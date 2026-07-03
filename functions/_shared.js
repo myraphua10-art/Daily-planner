@@ -36,6 +36,12 @@ export function photoKey(name) {
   return `photo:${slugify(name)}`;
 }
 
+// Proof-of-elimination photo, keyed by the person who got eliminated (each
+// person can only be eliminated once, so this is unambiguous).
+export function proofKey(name) {
+  return `proof:${slugify(name)}`;
+}
+
 // Shared shape for a hunter's reveal, whether they just claimed their name
 // or are revisiting. Looks up the current target's photo (if that person has
 // uploaded one yet) fresh each time, so it stays current as the chain shifts.

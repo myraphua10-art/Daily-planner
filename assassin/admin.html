@@ -98,6 +98,11 @@
     <button id="loadPhotosBtn">Load photos</button>
     <div id="photoGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;"></div>
 
+    <h2>Elimination proof photos</h2>
+    <p class="sub">Every elimination requires a proof photo of the catch - review them here to decide who earns bonus gifts.</p>
+    <button id="loadProofsBtn">Load proof photos</button>
+    <div id="proofGrid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px;"></div>
+
     <h2>Bounty target</h2>
     <p class="sub">Pick one active player as a public "high-value target" for a limited time - shown on the status board and guest pages. Any real prize/bragging rights are up to you in person. Leave the name blank and click Set to clear it.</p>
     <div class="row">
@@ -320,6 +325,37 @@
                   : `<div style="width:100%; aspect-ratio:1; border-radius:3px; border:1px dashed var(--line); background:#efe9d8; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--sub);">No photo yet</div>`
               }
               <div style="font-size:12px; margin-top:4px;">${p.name}</div>
+            </div>
+          `)
+          .join("");
+      } catch (e) {
+        grid.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
+
+    document.getElementById("loadProofsBtn").addEventListener("click", async () => {
+      const grid = document.getElementById("proofGrid");
+      grid.innerHTML = "";
+      try {
+        const res = await fetch("/api/admin-proofs", {
+          method: "POST",
+          headers: adminHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load proof photos.");
+        if (!data.rows.length) {
+          grid.innerHTML = `<div class="msg info">No eliminations yet.</div>`;
+          return;
+        }
+        grid.innerHTML = data.rows
+          .map((r) => `
+            <div style="text-align:center;">
+              ${
+                r.proofPhoto
+                  ? `<img src="${r.proofPhoto}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px; border:1px solid var(--line);">`
+                  : `<div style="width:100%; aspect-ratio:1; border-radius:3px; border:1px dashed var(--line); background:#efe9d8; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--sub);">No proof photo</div>`
+              }
+              <div style="font-size:12px; margin-top:4px;">${r.eliminatedBy} got ${r.name}</div>
             </div>
           `)
           .join("");
