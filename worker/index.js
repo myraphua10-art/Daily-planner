@@ -7,6 +7,7 @@ import { onRequestPost as eliminatePost } from "../functions/api/eliminate.js";
 import { onRequestPost as claimPost } from "../functions/api/claim.js";
 import { onRequestPost as undoEliminatePost } from "../functions/api/undo-eliminate.js";
 import { onRequestGet as statusGet } from "../functions/api/status.js";
+import { onRequestPost as whoisPost } from "../functions/api/whois.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -19,6 +20,7 @@ const routes = {
   "POST /api/claim": claimPost,
   "POST /api/undo-eliminate": undoEliminatePost,
   "GET /api/status": statusGet,
+  "POST /api/whois": whoisPost,
 };
 
 export default {

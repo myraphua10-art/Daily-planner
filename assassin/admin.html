@@ -103,6 +103,14 @@
       <div><input type="text" id="undoNameInput" placeholder="Exact name of the person eliminated by mistake"></div>
     </div>
     <button id="undoBtn" class="danger">Undo this elimination</button>
+
+    <h2>Reveal a pairing</h2>
+    <p class="sub">This breaks the surprise for yourself - only use it if you've decided you actually want to know. Type a name to see who is currently hunting them.</p>
+    <div class="row">
+      <div><input type="text" id="whoisNameInput" placeholder="Exact name"></div>
+    </div>
+    <button id="whoisBtn" class="danger">Show me who's hunting them</button>
+    <div id="whoisResult"></div>
   </div>
 
   <script type="module">
@@ -288,6 +296,29 @@
         document.getElementById("undoNameInput").value = "";
       } catch (e) {
         showStatus(e.message, "error");
+      }
+    });
+
+    document.getElementById("whoisBtn").addEventListener("click", async () => {
+      const name = document.getElementById("whoisNameInput").value.trim();
+      const resultEl = document.getElementById("whoisResult");
+      if (!name) return;
+      resultEl.innerHTML = "";
+      try {
+        const res = await fetch("/api/whois", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Lookup failed.");
+        let text;
+        if (data.won) text = `${name} already won the game.`;
+        else if (data.eliminated) text = `${name} is already out - eliminated by ${data.eliminatedBy}.`;
+        else text = `${data.hunter} is currently hunting ${name}.`;
+        resultEl.innerHTML = `<div class="msg info">${text}</div>`;
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
     });
   </script>
