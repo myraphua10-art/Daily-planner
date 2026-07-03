@@ -12,6 +12,7 @@ import { onRequestPost as setBountyPost } from "../functions/api/set-bounty.js";
 import { onRequestPost as setImmunityPost } from "../functions/api/set-immunity.js";
 import { onRequestPost as adminProofsPost } from "../functions/api/admin-proofs.js";
 import { onRequestPost as adminKillCodesPost } from "../functions/api/admin-kill-codes.js";
+import { onRequestPost as backfillKillCodesPost } from "../functions/api/backfill-kill-codes.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -29,6 +30,7 @@ const routes = {
   "POST /api/set-immunity": setImmunityPost,
   "POST /api/admin-proofs": adminProofsPost,
   "POST /api/admin-kill-codes": adminKillCodesPost,
+  "POST /api/backfill-kill-codes": backfillKillCodesPost,
 };
 
 export default {
