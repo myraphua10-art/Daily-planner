@@ -182,7 +182,7 @@
     });
 
     async function init() {
-      const res = await fetch("/api/game");
+      const res = await fetch("/api/game", { headers: adminHeaders() });
       const game = await res.json();
 
       playersInput.value = (game.players?.length ? game.players : DEFAULT_PLAYERS).join("\n");

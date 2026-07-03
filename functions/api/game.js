@@ -1,14 +1,25 @@
 import { json, getGame, putGame, requireAdmin } from "../_shared.js";
 
-// Public: returns only the guest list + lock status + rigged names.
-// Never contains anyone's actual target.
-export async function onRequestGet({ env }) {
+// Public fields only: guest list, lock status, bounty. NEVER riggedHunter/
+// riggedTarget here - those reveal a pairing and must only go to an
+// authenticated admin request (see the requireAdmin branch below).
+export async function onRequestGet({ request, env }) {
   const game = await getGame(env);
-  if (!game) {
-    return json({ players: [], locked: false, riggedHunter: "", riggedTarget: "" });
+  const base = {
+    players: game?.players ?? [],
+    locked: game?.locked ?? false,
+    bountyTarget: game?.bountyTarget ?? null,
+  };
+
+  if (requireAdmin(request, env)) {
+    return json({
+      ...base,
+      riggedHunter: game?.riggedHunter ?? "",
+      riggedTarget: game?.riggedTarget ?? "",
+    });
   }
-  const { players, locked, riggedHunter, riggedTarget } = game;
-  return json({ players, locked, riggedHunter, riggedTarget });
+
+  return json(base);
 }
 
 // Admin only: save/edit the guest list before generation.
