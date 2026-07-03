@@ -8,6 +8,7 @@ import { onRequestPost as claimPost } from "../functions/api/claim.js";
 import { onRequestPost as undoEliminatePost } from "../functions/api/undo-eliminate.js";
 import { onRequestGet as statusGet } from "../functions/api/status.js";
 import { onRequestPost as whoisPost } from "../functions/api/whois.js";
+import { onRequestPost as adminPhotosPost } from "../functions/api/admin-photos.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -21,6 +22,7 @@ const routes = {
   "POST /api/undo-eliminate": undoEliminatePost,
   "GET /api/status": statusGet,
   "POST /api/whois": whoisPost,
+  "POST /api/admin-photos": adminPhotosPost,
 };
 
 export default {

@@ -111,6 +111,11 @@
     </div>
     <button id="whoisBtn" class="danger">Show me who's hunting them</button>
     <div id="whoisResult"></div>
+
+    <h2>Uploaded photos</h2>
+    <p class="sub">See who has uploaded a photo of themselves so far. This doesn't show any pairings.</p>
+    <button id="loadPhotosBtn">Load photos</button>
+    <div id="photoGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;"></div>
   </div>
 
   <script type="module">
@@ -319,6 +324,34 @@
         resultEl.innerHTML = `<div class="msg info">${text}</div>`;
       } catch (e) {
         resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
+
+    document.getElementById("loadPhotosBtn").addEventListener("click", async () => {
+      const grid = document.getElementById("photoGrid");
+      grid.innerHTML = "";
+      try {
+        const res = await fetch("/api/admin-photos", {
+          method: "POST",
+          headers: adminHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load photos.");
+        grid.innerHTML = data.photos
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((p) => `
+            <div style="text-align:center;">
+              ${
+                p.photo
+                  ? `<img src="${p.photo}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px; border:1px solid var(--line);">`
+                  : `<div style="width:100%; aspect-ratio:1; border-radius:3px; border:1px dashed var(--line); background:#efe9d8; display:flex; align-items:center; justify-content:center; font-size:11px; color:var(--sub);">No photo yet</div>`
+              }
+              <div style="font-size:12px; margin-top:4px;">${p.name}</div>
+            </div>
+          `)
+          .join("");
+      } catch (e) {
+        grid.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
     });
   </script>
