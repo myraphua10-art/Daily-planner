@@ -281,10 +281,15 @@
           currentName = savedName;
           currentToken = savedToken;
           renderResult(result);
-          return;
         }
       }
 
+      // Event listeners must always be registered, even when the block
+      // above already rendered a result for a returning visitor - an
+      // earlier version of this code had a `return` right after
+      // renderResult() there, which skipped registering every listener
+      // below (including "I Got Them") for anyone revisiting with an
+      // already-claimed session, i.e. almost everyone after their first visit.
       claimBtn.addEventListener("click", async () => {
         const name = nameSelect.value;
         claimBtn.disabled = true;
