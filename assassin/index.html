@@ -119,11 +119,11 @@
       <div class="target" id="revealText">-</div>
     </div>
 
-    <div id="targetBreakBanner" class="break-banner hidden">&#128701; Your target is on a toilet break &mdash; hold off!</div>
+    <div id="targetBreakBanner" class="break-banner hidden">Your target is on a toilet break &mdash; hold off!</div>
 
     <button id="killBtn" class="kill-btn hidden">I Got Them</button>
 
-    <button id="breakToggleBtn" class="break-btn hidden">&#128701; Toilet break</button>
+    <button id="breakToggleBtn" class="break-btn hidden">Toilet break</button>
 
     <div id="proofArea" class="hidden">
       <p class="sub">ATTACH PROOF OF KILL<br>Funniest picture gets a prize....</p>
@@ -261,12 +261,12 @@
           }
           const mins = Math.floor(remaining / 60000);
           const secs = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
-          breakToggleBtn.innerHTML = `&#128701; On toilet break &mdash; ${mins}:${secs} left`;
+          breakToggleBtn.innerHTML = `On toilet break &mdash; ${mins}:${secs} left`;
         };
         update();
         breakCountdownInterval = setInterval(update, 1000);
       } else {
-        breakToggleBtn.innerHTML = "&#128701; Toilet break";
+        breakToggleBtn.innerHTML = "Toilet break";
       }
     }
 

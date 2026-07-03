@@ -94,14 +94,24 @@
     <button id="undoBtn" class="danger">Undo this elimination</button>
 
     <h2>Uploaded photos</h2>
-    <p class="sub">See who has uploaded a photo of themselves so far. This doesn't show any pairings.</p>
+    <p class="sub">See who has uploaded a photo of themselves so far. Tick the ones you want to keep, then download them. This doesn't show any pairings.</p>
     <button id="loadPhotosBtn">Load photos</button>
     <div id="photoGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;"></div>
+    <div id="photoSelectRow" class="hidden" style="display:flex; gap:8px; margin-top:10px;">
+      <button id="photoSelectAllBtn" type="button" style="flex:1;">Select all</button>
+      <button id="photoSelectNoneBtn" type="button" style="flex:1;">Select none</button>
+    </div>
+    <button id="downloadPhotosBtn" class="hidden" style="margin-top:8px;">Download selected</button>
 
     <h2>Elimination proof photos</h2>
-    <p class="sub">Every elimination requires a proof photo of the catch - review them here to decide who earns bonus gifts.</p>
+    <p class="sub">Every elimination requires a proof photo of the catch - review them here, tick your favourites, and download them.</p>
     <button id="loadProofsBtn">Load proof photos</button>
     <div id="proofGrid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px;"></div>
+    <div id="proofSelectRow" class="hidden" style="display:flex; gap:8px; margin-top:10px;">
+      <button id="proofSelectAllBtn" type="button" style="flex:1;">Select all</button>
+      <button id="proofSelectNoneBtn" type="button" style="flex:1;">Select none</button>
+    </div>
+    <button id="downloadProofsBtn" class="hidden" style="margin-top:8px;">Download selected</button>
 
     <h2>Bounty target</h2>
     <p class="sub">Pick one active player as a public "high-value target" for a limited time - shown on the status board and guest pages. Any real prize/bragging rights are up to you in person. Leave the name blank and click Set to clear it.</p>
@@ -305,9 +315,60 @@
       }
     });
 
+    let loadedPhotos = [];
+    let loadedProofs = [];
+
+    function downloadDataUrl(dataUrl, filename) {
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    function extFromDataUrl(dataUrl) {
+      const m = /^data:image\/([a-zA-Z0-9.+-]+);/.exec(dataUrl);
+      let ext = m ? m[1] : "jpg";
+      if (ext === "jpeg") ext = "jpg";
+      return ext;
+    }
+
+    // Photos are already sitting in the browser as data URIs once loaded, so
+    // "downloading" just means triggering a save for each checked one - no
+    // extra server round-trip or zip library needed. A short delay between
+    // each keeps browsers from blocking a burst of simultaneous downloads.
+    async function downloadChecked(gridId, items, buttonEl) {
+      const checks = document.querySelectorAll(`#${gridId} .photo-check:checked`);
+      if (!checks.length) return;
+      buttonEl.disabled = true;
+      const originalText = buttonEl.textContent;
+      let i = 0;
+      for (const cb of checks) {
+        const item = items[Number(cb.dataset.index)];
+        if (!item) continue;
+        i++;
+        downloadDataUrl(item.dataUrl, `${item.name.replace(/\s+/g, "-")}.${extFromDataUrl(item.dataUrl)}`);
+        buttonEl.textContent = `Downloading ${i} / ${checks.length}...`;
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      buttonEl.textContent = originalText;
+      buttonEl.disabled = false;
+    }
+
+    function setAllChecked(gridId, checked) {
+      document.querySelectorAll(`#${gridId} .photo-check`).forEach((cb) => {
+        cb.checked = checked;
+      });
+    }
+
     document.getElementById("loadPhotosBtn").addEventListener("click", async () => {
       const grid = document.getElementById("photoGrid");
+      const selectRow = document.getElementById("photoSelectRow");
+      const downloadBtn = document.getElementById("downloadPhotosBtn");
       grid.innerHTML = "";
+      selectRow.classList.add("hidden");
+      downloadBtn.classList.add("hidden");
       try {
         const res = await fetch("/api/admin-photos", {
           method: "POST",
@@ -315,10 +376,18 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to load photos.");
-        grid.innerHTML = data.photos
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((p) => `
-            <div style="text-align:center;">
+        const sorted = data.photos.slice().sort((a, b) => a.name.localeCompare(b.name));
+        loadedPhotos = sorted.filter((p) => p.photo).map((p) => ({ name: p.name, dataUrl: p.photo }));
+        grid.innerHTML = sorted
+          .map((p) => {
+            const idx = loadedPhotos.findIndex((x) => x.name === p.name);
+            return `
+            <div style="position:relative; text-align:center;">
+              ${
+                p.photo
+                  ? `<input type="checkbox" class="photo-check" data-index="${idx}" style="position:absolute; top:6px; left:6px; width:18px; height:18px; z-index:2;">`
+                  : ""
+              }
               ${
                 p.photo
                   ? `<img src="${p.photo}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px; border:1px solid var(--line);">`
@@ -326,16 +395,31 @@
               }
               <div style="font-size:12px; margin-top:4px;">${p.name}</div>
             </div>
-          `)
+          `;
+          })
           .join("");
+        if (loadedPhotos.length) {
+          selectRow.classList.remove("hidden");
+          downloadBtn.classList.remove("hidden");
+        }
       } catch (e) {
         grid.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
     });
 
+    document.getElementById("photoSelectAllBtn").addEventListener("click", () => setAllChecked("photoGrid", true));
+    document.getElementById("photoSelectNoneBtn").addEventListener("click", () => setAllChecked("photoGrid", false));
+    document.getElementById("downloadPhotosBtn").addEventListener("click", (e) => {
+      downloadChecked("photoGrid", loadedPhotos, e.currentTarget);
+    });
+
     document.getElementById("loadProofsBtn").addEventListener("click", async () => {
       const grid = document.getElementById("proofGrid");
+      const selectRow = document.getElementById("proofSelectRow");
+      const downloadBtn = document.getElementById("downloadProofsBtn");
       grid.innerHTML = "";
+      selectRow.classList.add("hidden");
+      downloadBtn.classList.add("hidden");
       try {
         const res = await fetch("/api/admin-proofs", {
           method: "POST",
@@ -347,9 +431,19 @@
           grid.innerHTML = `<div class="msg info">No eliminations yet.</div>`;
           return;
         }
+        loadedProofs = data.rows
+          .filter((r) => r.proofPhoto)
+          .map((r) => ({ name: `${r.eliminatedBy}-got-${r.name}`, dataUrl: r.proofPhoto }));
         grid.innerHTML = data.rows
-          .map((r) => `
-            <div style="text-align:center;">
+          .map((r) => {
+            const idx = loadedProofs.findIndex((x) => x.name === `${r.eliminatedBy}-got-${r.name}`);
+            return `
+            <div style="position:relative; text-align:center;">
+              ${
+                r.proofPhoto
+                  ? `<input type="checkbox" class="photo-check" data-index="${idx}" style="position:absolute; top:6px; left:6px; width:18px; height:18px; z-index:2;">`
+                  : ""
+              }
               ${
                 r.proofPhoto
                   ? `<img src="${r.proofPhoto}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px; border:1px solid var(--line);">`
@@ -357,11 +451,22 @@
               }
               <div style="font-size:12px; margin-top:4px;">${r.eliminatedBy} got ${r.name}</div>
             </div>
-          `)
+          `;
+          })
           .join("");
+        if (loadedProofs.length) {
+          selectRow.classList.remove("hidden");
+          downloadBtn.classList.remove("hidden");
+        }
       } catch (e) {
         grid.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
+    });
+
+    document.getElementById("proofSelectAllBtn").addEventListener("click", () => setAllChecked("proofGrid", true));
+    document.getElementById("proofSelectNoneBtn").addEventListener("click", () => setAllChecked("proofGrid", false));
+    document.getElementById("downloadProofsBtn").addEventListener("click", (e) => {
+      downloadChecked("proofGrid", loadedProofs, e.currentTarget);
     });
 
     document.getElementById("bountyBtn").addEventListener("click", async () => {
