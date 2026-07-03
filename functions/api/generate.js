@@ -29,6 +29,7 @@ export async function onRequestPost({ request, env }) {
           status: "active",
           eliminatedBy: null,
           eliminatedAt: null,
+          immune: false,
         })
       )
     )

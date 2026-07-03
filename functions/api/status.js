@@ -6,7 +6,7 @@ import { json, getGame, assignKey } from "../_shared.js";
 // is currently hunting whom.
 export async function onRequestGet({ env }) {
   const game = await getGame(env);
-  if (!game || !game.locked) return json({ locked: false, players: [] });
+  if (!game || !game.locked) return json({ locked: false, players: [], bountyTarget: null });
 
   const players = await Promise.all(
     game.players.map(async (name) => {
@@ -17,9 +17,10 @@ export async function onRequestGet({ env }) {
         name,
         status: record.status,
         eliminatedBy: record.status === "eliminated" ? record.eliminatedBy : undefined,
+        immune: record.status === "active" ? Boolean(record.immune) : undefined,
       };
     })
   );
 
-  return json({ locked: true, players });
+  return json({ locked: true, players, bountyTarget: game.bountyTarget || null });
 }

@@ -7,10 +7,10 @@ import { onRequestPost as eliminatePost } from "../functions/api/eliminate.js";
 import { onRequestPost as claimPost } from "../functions/api/claim.js";
 import { onRequestPost as undoEliminatePost } from "../functions/api/undo-eliminate.js";
 import { onRequestGet as statusGet } from "../functions/api/status.js";
-import { onRequestPost as whoisPost } from "../functions/api/whois.js";
 import { onRequestPost as adminPhotosPost } from "../functions/api/admin-photos.js";
-import { onRequestPost as rigPairingPost } from "../functions/api/rig-pairing.js";
 import { onRequestPost as adminFullMappingPost } from "../functions/api/admin-full-mapping.js";
+import { onRequestPost as setBountyPost } from "../functions/api/set-bounty.js";
+import { onRequestPost as setImmunityPost } from "../functions/api/set-immunity.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -23,10 +23,10 @@ const routes = {
   "POST /api/claim": claimPost,
   "POST /api/undo-eliminate": undoEliminatePost,
   "GET /api/status": statusGet,
-  "POST /api/whois": whoisPost,
   "POST /api/admin-photos": adminPhotosPost,
-  "POST /api/rig-pairing": rigPairingPost,
   "POST /api/admin-full-mapping": adminFullMappingPost,
+  "POST /api/set-bounty": setBountyPost,
+  "POST /api/set-immunity": setImmunityPost,
 };
 
 export default {

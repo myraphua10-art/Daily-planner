@@ -1,8 +1,8 @@
 import { json, getGame, assignKey, requireAdmin } from "../_shared.js";
 
-// Admin only - emergency use. Unlike /api/whois (one name at a time), this
-// dumps the entire current hunter->target mapping in one call, meant for
-// diagnosing/fixing a live game after a mistake, not for casual browsing.
+// Admin only - emergency use. Dumps the entire current hunter->target
+// mapping in one call, meant for diagnosing/fixing a live game after a
+// mistake, not for casual browsing.
 export async function onRequestPost({ request, env }) {
   if (!requireAdmin(request, env)) return json({ error: "Unauthorized" }, 401);
 

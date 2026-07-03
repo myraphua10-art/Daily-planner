@@ -34,6 +34,9 @@ export async function onRequestPost({ request, env }) {
   if (targetRecord.status === "eliminated") {
     return json({ error: "That target has already been eliminated." }, 400);
   }
+  if (targetRecord.immune) {
+    return json({ error: "Your target is currently immune - try again later." }, 400);
+  }
 
   targetRecord.status = "eliminated";
   targetRecord.eliminatedBy = match;

@@ -70,6 +70,12 @@
   .reveal.won{background:var(--card); color:var(--ink); border:2px solid var(--accent);}
   .hint{font-size:12.5px; color:var(--sub); margin-top:16px; text-align:center; line-height:1.6; font-style:italic;}
   .tagline{font-size:14px; color:#544f3f; margin:18px 0 0; text-align:center; font-weight:700;}
+  .countdown{text-align:center; font-size:12.5px; color:var(--sub); margin-bottom:20px; letter-spacing:.04em;}
+  .countdown b{color:var(--ink); font-family:"Playfair Display", Georgia, serif; font-style:italic; font-size:15px;}
+  .bounty-banner{
+    text-align:center; font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
+    color:var(--gold); background:#f6efe0; border:1px solid #e3cfa1; border-radius:3px; padding:8px 10px; margin-bottom:16px;
+  }
   .hidden{display:none;}
 </style>
 </head>
@@ -78,7 +84,10 @@
     <span class="sparkle s1">&#10022;</span>
     <span class="sparkle s2">&#10022;</span>
     <h1>Assassin</h1>
+    <div class="countdown" id="countdown"></div>
     <p class="sub" id="introText">Pick your name to lock in and see who <b>you're</b> hunting. Nobody else - not even Myra - can see this screen, and it only ever shows your own target.</p>
+
+    <div id="bountyBanner" class="bounty-banner hidden"></div>
 
     <div id="msgArea"></div>
 
@@ -110,6 +119,24 @@
   <script type="module">
     const STORAGE_NAME = "assassin_claimed_name";
     const STORAGE_TOKEN = "assassin_claim_token";
+
+    const PARTY_DATE = new Date("2026-09-06T16:00:00");
+
+    function updateCountdown() {
+      const el = document.getElementById("countdown");
+      const diff = PARTY_DATE - new Date();
+      if (diff <= 0) {
+        el.innerHTML = `<b>The hunt has begun.</b>`;
+        return;
+      }
+      const days = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
+      const mins = Math.floor((diff % 3600000) / 60000);
+      const secs = Math.floor((diff % 60000) / 1000);
+      el.innerHTML = `<b>${days}d ${hours}h ${mins}m ${secs}s</b> until the hunt begins`;
+    }
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
 
     const introText = document.getElementById("introText");
     const msgArea = document.getElementById("msgArea");
@@ -212,6 +239,12 @@
     async function main() {
       const res = await fetch("/api/game");
       const game = await res.json();
+
+      if (game.bountyTarget) {
+        const bountyBanner = document.getElementById("bountyBanner");
+        bountyBanner.textContent = `Bounty: ${game.bountyTarget}`;
+        bountyBanner.classList.remove("hidden");
+      }
 
       if (!game.locked) {
         showMessage("Targets haven't been generated yet - check back closer to the party.", "info");

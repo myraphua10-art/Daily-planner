@@ -104,32 +104,34 @@
     </div>
     <button id="undoBtn" class="danger">Undo this elimination</button>
 
-    <h2>Reveal a pairing</h2>
-    <p class="sub">This breaks the surprise for yourself - only use it if you've decided you actually want to know. Type a name to see who is currently hunting them.</p>
-    <div class="row">
-      <div><input type="text" id="whoisNameInput" placeholder="Exact name"></div>
-    </div>
-    <button id="whoisBtn" class="danger">Show me who's hunting them</button>
-    <div id="whoisResult"></div>
-
     <h2>Uploaded photos</h2>
     <p class="sub">See who has uploaded a photo of themselves so far. This doesn't show any pairings.</p>
     <button id="loadPhotosBtn">Load photos</button>
     <div id="photoGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;"></div>
 
-    <h2>Force a pairing</h2>
-    <p class="sub">Rewires the live game so the hunter targets exactly who you specify, without disturbing anyone else's claim, photo, or target. Only works while everyone involved (including whoever currently hunts each of them) is still active.</p>
-    <div class="row">
-      <div><input type="text" id="rigHunterInput" placeholder="Hunter's exact name"></div>
-      <div><input type="text" id="rigTargetInput" placeholder="Target's exact name"></div>
-    </div>
-    <button id="rigBtn" class="danger">Force this pairing</button>
-    <div id="rigResult"></div>
-
     <h2>Emergency: full mapping</h2>
     <p class="sub">Only for fixing a mistake - dumps the entire current hunter -&gt; target list at once, unlike the one-at-a-time lookup above.</p>
     <button id="loadFullMappingBtn">Load full mapping</button>
     <div id="fullMappingResult" style="margin-top:10px; font-size:14px;"></div>
+
+    <h2>Bounty target</h2>
+    <p class="sub">Pick one active player as a public "high-value target" for a limited time - shown on the status board and guest pages. Any real prize/bragging rights are up to you in person. Leave the name blank and click Set to clear it.</p>
+    <div class="row">
+      <div><input type="text" id="bountyNameInput" placeholder="Exact name (blank to clear)"></div>
+    </div>
+    <button id="bountyBtn">Set bounty</button>
+    <div id="bountyResult"></div>
+
+    <h2>Immunity grant</h2>
+    <p class="sub">Give one active player temporary protection - nobody can eliminate them while immune. You decide when to use this; the option is just ready here for when you do.</p>
+    <div class="row">
+      <div><input type="text" id="immunityNameInput" placeholder="Exact name"></div>
+    </div>
+    <div class="row">
+      <button id="grantImmunityBtn">Grant immunity</button>
+      <button id="revokeImmunityBtn" class="danger">Revoke immunity</button>
+    </div>
+    <div id="immunityResult"></div>
   </div>
 
   <script type="module">
@@ -318,29 +320,6 @@
       }
     });
 
-    document.getElementById("whoisBtn").addEventListener("click", async () => {
-      const name = document.getElementById("whoisNameInput").value.trim();
-      const resultEl = document.getElementById("whoisResult");
-      if (!name) return;
-      resultEl.innerHTML = "";
-      try {
-        const res = await fetch("/api/whois", {
-          method: "POST",
-          headers: adminHeaders({ "content-type": "application/json" }),
-          body: JSON.stringify({ name }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Lookup failed.");
-        let text;
-        if (data.won) text = `${name} already won the game.`;
-        else if (data.eliminated) text = `${name} is already out - eliminated by ${data.eliminatedBy}.`;
-        else text = `${data.hunter} is currently hunting ${name}.`;
-        resultEl.innerHTML = `<div class="msg info">${text}</div>`;
-      } catch (e) {
-        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
-      }
-    });
-
     document.getElementById("loadPhotosBtn").addEventListener("click", async () => {
       const grid = document.getElementById("photoGrid");
       grid.innerHTML = "";
@@ -369,29 +348,6 @@
       }
     });
 
-    document.getElementById("rigBtn").addEventListener("click", async () => {
-      const hunter = document.getElementById("rigHunterInput").value.trim();
-      const target = document.getElementById("rigTargetInput").value.trim();
-      const resultEl = document.getElementById("rigResult");
-      if (!hunter || !target) return;
-      if (!confirm(`Force ${hunter} to target ${target}? This changes the live game.`)) return;
-      resultEl.innerHTML = "";
-      try {
-        const res = await fetch("/api/rig-pairing", {
-          method: "POST",
-          headers: adminHeaders({ "content-type": "application/json" }),
-          body: JSON.stringify({ hunter, target }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to rig that pairing.");
-        resultEl.innerHTML = `<div class="msg success">${hunter} now targets ${target}.</div>`;
-        document.getElementById("rigHunterInput").value = "";
-        document.getElementById("rigTargetInput").value = "";
-      } catch (e) {
-        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
-      }
-    });
-
     document.getElementById("loadFullMappingBtn").addEventListener("click", async () => {
       const el = document.getElementById("fullMappingResult");
       el.innerHTML = "Loading...";
@@ -415,6 +371,44 @@
         el.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
     });
+
+    document.getElementById("bountyBtn").addEventListener("click", async () => {
+      const name = document.getElementById("bountyNameInput").value.trim();
+      const resultEl = document.getElementById("bountyResult");
+      try {
+        const res = await fetch("/api/set-bounty", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ name: name || null }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to set bounty.");
+        resultEl.innerHTML = `<div class="msg success">${data.bountyTarget ? `Bounty set on ${data.bountyTarget}.` : "Bounty cleared."}</div>`;
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
+
+    async function setImmunity(immune) {
+      const name = document.getElementById("immunityNameInput").value.trim();
+      const resultEl = document.getElementById("immunityResult");
+      if (!name) return;
+      try {
+        const res = await fetch("/api/set-immunity", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ name, immune }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to update immunity.");
+        resultEl.innerHTML = `<div class="msg success">${data.name} is ${immune ? "now immune." : "no longer immune."}</div>`;
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    }
+
+    document.getElementById("grantImmunityBtn").addEventListener("click", () => setImmunity(true));
+    document.getElementById("revokeImmunityBtn").addEventListener("click", () => setImmunity(false));
   </script>
 </body>
 </html>
