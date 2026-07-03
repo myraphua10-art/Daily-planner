@@ -116,8 +116,6 @@
       <p class="sub">ATTACH PROOF OF KILL<br>Funniest picture gets a prize....</p>
       <img id="proofPreview" class="photo-preview" alt="">
       <input type="file" id="proofInput" accept="image/*" capture="environment">
-      <label for="codeInput">Code from the back of their photo</label>
-      <input type="text" id="codeInput" placeholder="e.g. 7XQ2KM" autocapitalize="characters">
       <button id="submitProofBtn" disabled>Confirm Elimination</button>
       <button id="cancelProofBtn" class="secondary">Cancel</button>
     </div>
@@ -166,7 +164,6 @@
     const proofArea = document.getElementById("proofArea");
     const proofInput = document.getElementById("proofInput");
     const proofPreview = document.getElementById("proofPreview");
-    const codeInput = document.getElementById("codeInput");
     const submitProofBtn = document.getElementById("submitProofBtn");
     const cancelProofBtn = document.getElementById("cancelProofBtn");
     const hintText = document.getElementById("hintText");
@@ -370,7 +367,6 @@
       cancelProofBtn.addEventListener("click", () => {
         pendingProofDataUrl = null;
         proofInput.value = "";
-        codeInput.value = "";
         proofPreview.classList.remove("shown");
         submitProofBtn.disabled = true;
         proofArea.classList.add("hidden");
@@ -393,10 +389,6 @@
 
       submitProofBtn.addEventListener("click", async () => {
         if (!pendingProofDataUrl) return;
-        if (!codeInput.value.trim()) {
-          showMessage("Enter the code from the back of their photo.", "error");
-          return;
-        }
         submitProofBtn.disabled = true;
         try {
           const res = await fetch("/api/eliminate", {
@@ -405,7 +397,6 @@
             body: JSON.stringify({
               name: currentName,
               proofPhotoDataUrl: pendingProofDataUrl,
-              killCode: codeInput.value.trim(),
             }),
           });
           const data = await res.json();

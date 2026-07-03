@@ -11,11 +11,7 @@ export async function onRequestPost({ request, env }) {
   const name = String(body.name || "").trim();
   const token = request.headers.get("x-claim-token") || "";
   const proofPhotoDataUrl = body.proofPhotoDataUrl ? String(body.proofPhotoDataUrl) : null;
-  const enteredCode = String(body.killCode || "").trim().toUpperCase();
   if (!name || !token) return json({ error: "Missing name or claim token." }, 400);
-  if (!enteredCode) {
-    return json({ error: "Enter the code from the back of their photo." }, 400);
-  }
   if (!proofPhotoDataUrl || !proofPhotoDataUrl.startsWith("data:image/")) {
     return json({ error: "A proof photo of the catch is required." }, 400);
   }
@@ -49,9 +45,6 @@ export async function onRequestPost({ request, env }) {
   }
   if (targetRecord.immune) {
     return json({ error: "Your target is currently immune - try again later." }, 400);
-  }
-  if (!targetRecord.killCode || enteredCode !== targetRecord.killCode) {
-    return json({ error: "Wrong code - check the back of their photo and try again." }, 400);
   }
 
   targetRecord.status = "eliminated";

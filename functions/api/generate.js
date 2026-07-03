@@ -1,5 +1,5 @@
 import { json, getGame, putGame, requireAdmin, assignKey } from "../_shared.js";
-import { generateAssassinCycle, generateKillCode } from "../../assassin/game-logic.js";
+import { generateAssassinCycle } from "../../assassin/game-logic.js";
 
 // Admin only. Runs entirely on Cloudflare's servers - the resulting
 // assignments are written straight to KV and are never returned in this
@@ -18,20 +18,6 @@ export async function onRequestPost({ request, env }) {
     return json({ error: e.message }, 400);
   }
 
-  // Every player gets a unique verification code to write on the back of
-  // their printed photo/polaroid - whoever eliminates them has to enter it,
-  // proving they actually got the right photo rather than just claiming so.
-  const usedCodes = new Set();
-  const killCodes = {};
-  for (const player of game.players) {
-    let code;
-    do {
-      code = generateKillCode();
-    } while (usedCodes.has(code));
-    usedCodes.add(code);
-    killCodes[player] = code;
-  }
-
   await Promise.all(
     Object.entries(assignments).map(([hunter, target]) =>
       env.ASSASSIN_KV.put(
@@ -44,7 +30,6 @@ export async function onRequestPost({ request, env }) {
           eliminatedBy: null,
           eliminatedAt: null,
           immune: false,
-          killCode: killCodes[hunter],
         })
       )
     )

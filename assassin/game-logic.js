@@ -47,17 +47,3 @@ export function generateAssassinCycle(players, riggedHunter, riggedTarget) {
   }
   return assignments;
 }
-
-// Short, hand-writable verification code, one per player - meant to be
-// written on the back of each person's printed photo/polaroid before the
-// party. Excludes visually ambiguous characters (0/O, 1/I/L) so it's easy to
-// transcribe by hand and read back under party lighting.
-const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-
-export function generateKillCode() {
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  }
-  return code;
-}
