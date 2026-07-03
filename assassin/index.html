@@ -77,6 +77,15 @@
     text-align:center; font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
     color:var(--gold); background:#f6efe0; border:1px solid #e3cfa1; border-radius:3px; padding:8px 10px; margin-bottom:16px;
   }
+  .break-banner{
+    text-align:center; font-size:12.5px; font-weight:600; color:#2f4a5a; background:#e6eef6;
+    border:1px solid #c3d6e5; border-radius:3px; padding:8px 10px; margin-top:12px;
+  }
+  button.break-btn{
+    background:transparent; border:none; color:var(--sub); margin-top:10px;
+    font-weight:600; font-size:13px; letter-spacing:normal; text-transform:none; box-shadow:none;
+  }
+  button.break-btn.active{color:#2f4a5a;}
   .hidden{display:none;}
 </style>
 </head>
@@ -110,7 +119,11 @@
       <div class="target" id="revealText">-</div>
     </div>
 
+    <div id="targetBreakBanner" class="break-banner hidden">&#128701; Your target is on a break &mdash; hold off!</div>
+
     <button id="killBtn" class="kill-btn hidden">I Got Them</button>
+
+    <button id="breakToggleBtn" class="break-btn hidden">&#128701; I need the bathroom</button>
 
     <div id="proofArea" class="hidden">
       <p class="sub">ATTACH PROOF OF KILL<br>Funniest picture gets a prize....</p>
@@ -161,6 +174,8 @@
     const revealText = document.getElementById("revealText");
     const dossierPhoto = document.getElementById("dossierPhoto");
     const killBtn = document.getElementById("killBtn");
+    const targetBreakBanner = document.getElementById("targetBreakBanner");
+    const breakToggleBtn = document.getElementById("breakToggleBtn");
     const proofArea = document.getElementById("proofArea");
     const proofInput = document.getElementById("proofInput");
     const proofPreview = document.getElementById("proofPreview");
@@ -184,6 +199,8 @@
       proofArea.classList.add("hidden");
       revealArea.classList.remove("hidden");
       revealArea.classList.remove("eliminated", "won");
+      targetBreakBanner.classList.add("hidden");
+      breakToggleBtn.classList.add("hidden");
 
       if (result.eliminated) {
         revealArea.classList.add("eliminated");
@@ -215,6 +232,20 @@
       revealText.textContent = result.targetName;
       killBtn.classList.remove("hidden");
       hintText.textContent = "Keep this to yourself. If you switch phones and lose access, ask me to reset your name.";
+
+      if (result.targetOnBreak) {
+        targetBreakBanner.classList.remove("hidden");
+      }
+
+      breakToggleBtn.classList.remove("hidden");
+      setBreakButtonState(Boolean(result.onBreak));
+    }
+
+    function setBreakButtonState(onBreak) {
+      breakToggleBtn.classList.toggle("active", onBreak);
+      breakToggleBtn.innerHTML = onBreak
+        ? "&#128701; I'm back &mdash; tap to end break"
+        : "&#128701; I need the bathroom";
     }
 
     async function fetchTarget(name, token) {
@@ -362,6 +393,28 @@
       killBtn.addEventListener("click", () => {
         killBtn.classList.add("hidden");
         proofArea.classList.remove("hidden");
+      });
+
+      breakToggleBtn.addEventListener("click", async () => {
+        breakToggleBtn.disabled = true;
+        try {
+          const res = await fetch("/api/toggle-break", {
+            method: "POST",
+            headers: { "x-claim-token": currentToken, "content-type": "application/json" },
+            body: JSON.stringify({ name: currentName }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            showMessage(data.error || "Something went wrong.", "error");
+            return;
+          }
+          setBreakButtonState(data.onBreak);
+        } catch (e) {
+          console.error(e);
+          showMessage("Something went wrong. Try again in a moment.", "error");
+        } finally {
+          breakToggleBtn.disabled = false;
+        }
       });
 
       cancelProofBtn.addEventListener("click", () => {

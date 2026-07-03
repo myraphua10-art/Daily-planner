@@ -18,6 +18,7 @@ export async function onRequestGet({ env }) {
         status: record.status,
         eliminatedBy: record.status === "eliminated" ? record.eliminatedBy : undefined,
         immune: record.status === "active" ? Boolean(record.immune) : undefined,
+        onBreak: record.status === "active" ? Boolean(record.onBreak) : undefined,
       };
     })
   );

@@ -100,7 +100,7 @@
                 <div class="pname">${p.name}${p.name === data.bountyTarget ? " &#127919;" : ""}</div>
                 ${p.eliminatedBy ? `<div class="elim-note">eliminated by ${p.eliminatedBy}</div>` : ""}
               </div>
-              <div>${statusBadge(p)}${p.immune ? `<span class="badge immune">Immune</span>` : ""}</div>
+              <div>${statusBadge(p)}${p.immune ? `<span class="badge immune">Immune</span>` : ""}${p.onBreak ? `<span class="badge immune">&#128701; Break</span>` : ""}</div>
             </li>
           `)
           .join("");

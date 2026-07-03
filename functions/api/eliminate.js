@@ -46,6 +46,9 @@ export async function onRequestPost({ request, env }) {
   if (targetRecord.immune) {
     return json({ error: "Your target is currently immune - try again later." }, 400);
   }
+  if (targetRecord.onBreak) {
+    return json({ error: "Your target is on a break right now - try again in a bit." }, 400);
+  }
 
   targetRecord.status = "eliminated";
   targetRecord.eliminatedBy = match;
