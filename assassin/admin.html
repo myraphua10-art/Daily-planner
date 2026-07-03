@@ -125,6 +125,11 @@
     </div>
     <button id="rigBtn" class="danger">Force this pairing</button>
     <div id="rigResult"></div>
+
+    <h2>Emergency: full mapping</h2>
+    <p class="sub">Only for fixing a mistake - dumps the entire current hunter -&gt; target list at once, unlike the one-at-a-time lookup above.</p>
+    <button id="loadFullMappingBtn">Load full mapping</button>
+    <div id="fullMappingResult" style="margin-top:10px; font-size:14px;"></div>
   </div>
 
   <script type="module">
@@ -384,6 +389,30 @@
         document.getElementById("rigTargetInput").value = "";
       } catch (e) {
         resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
+
+    document.getElementById("loadFullMappingBtn").addEventListener("click", async () => {
+      const el = document.getElementById("fullMappingResult");
+      el.innerHTML = "Loading...";
+      try {
+        const res = await fetch("/api/admin-full-mapping", {
+          method: "POST",
+          headers: adminHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load.");
+        el.innerHTML = data.rows
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((r) => {
+            if (r.status === "eliminated") return `${r.name} &mdash; OUT (eliminated by ${r.eliminatedBy})`;
+            if (r.status === "won") return `${r.name} &mdash; WON`;
+            return `${r.name} &rarr; ${r.targetName} ${r.claimed ? "" : "(not claimed yet)"}`;
+          })
+          .map((line) => `<div>${line}</div>`)
+          .join("");
+      } catch (e) {
+        el.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
     });
   </script>

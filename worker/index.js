@@ -10,6 +10,7 @@ import { onRequestGet as statusGet } from "../functions/api/status.js";
 import { onRequestPost as whoisPost } from "../functions/api/whois.js";
 import { onRequestPost as adminPhotosPost } from "../functions/api/admin-photos.js";
 import { onRequestPost as rigPairingPost } from "../functions/api/rig-pairing.js";
+import { onRequestPost as adminFullMappingPost } from "../functions/api/admin-full-mapping.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -25,6 +26,7 @@ const routes = {
   "POST /api/whois": whoisPost,
   "POST /api/admin-photos": adminPhotosPost,
   "POST /api/rig-pairing": rigPairingPost,
+  "POST /api/admin-full-mapping": adminFullMappingPost,
 };
 
 export default {
