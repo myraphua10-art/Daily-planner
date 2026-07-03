@@ -11,7 +11,7 @@ export function json(data, status = 200) {
 // configured on the Worker (e.g. dashboard secret setup didn't take), so
 // the admin gate keeps working without depending on that being right.
 // Change FALLBACK_PASSCODE to something private before sharing this repo further.
-const FALLBACK_PASSCODE = "sweet16myra";
+const FALLBACK_PASSCODE = "697294";
 
 export function requireAdmin(request, env) {
   const provided = (request.headers.get("x-admin-passcode") || "").trim();
