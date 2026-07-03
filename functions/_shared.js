@@ -42,6 +42,16 @@ export function proofKey(name) {
   return `proof:${slugify(name)}`;
 }
 
+// Toilet breaks auto-expire so nobody can sit "on break" indefinitely to
+// dodge being eliminated. Time-limited rather than a plain boolean toggle.
+export const BREAK_DURATION_MS = 3 * 60 * 1000;
+
+export function isOnBreak(record) {
+  return Boolean(
+    record.onBreak && record.onBreakSince && Date.now() - record.onBreakSince < BREAK_DURATION_MS
+  );
+}
+
 // Shared shape for a hunter's reveal, whether they just claimed their name
 // or are revisiting. Looks up the current target's photo (if that person has
 // uploaded one yet) fresh each time, so it stays current as the chain shifts.
@@ -57,12 +67,14 @@ export async function buildReveal(env, record, token) {
   }
   const targetPhoto = await env.ASSASSIN_KV.get(photoKey(record.targetName));
   const targetRaw = await env.ASSASSIN_KV.get(assignKey(record.targetName));
-  const targetOnBreak = targetRaw ? Boolean(JSON.parse(targetRaw).onBreak) : false;
+  const targetRecord = targetRaw ? JSON.parse(targetRaw) : null;
+  const selfOnBreak = isOnBreak(record);
   return {
     targetName: record.targetName,
     targetPhoto: targetPhoto || null,
-    targetOnBreak,
-    onBreak: Boolean(record.onBreak),
+    targetOnBreak: targetRecord ? isOnBreak(targetRecord) : false,
+    onBreak: selfOnBreak,
+    onBreakExpiresAt: selfOnBreak ? record.onBreakSince + BREAK_DURATION_MS : null,
     claimToken: token,
   };
 }

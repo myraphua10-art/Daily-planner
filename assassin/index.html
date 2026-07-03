@@ -119,11 +119,11 @@
       <div class="target" id="revealText">-</div>
     </div>
 
-    <div id="targetBreakBanner" class="break-banner hidden">&#128701; Your target is on a break &mdash; hold off!</div>
+    <div id="targetBreakBanner" class="break-banner hidden">&#128701; Your target is on a toilet break &mdash; hold off!</div>
 
     <button id="killBtn" class="kill-btn hidden">I Got Them</button>
 
-    <button id="breakToggleBtn" class="break-btn hidden">&#128701; I need the bathroom</button>
+    <button id="breakToggleBtn" class="break-btn hidden">&#128701; Toilet break</button>
 
     <div id="proofArea" class="hidden">
       <p class="sub">ATTACH PROOF OF KILL<br>Funniest picture gets a prize....</p>
@@ -238,14 +238,36 @@
       }
 
       breakToggleBtn.classList.remove("hidden");
-      setBreakButtonState(Boolean(result.onBreak));
+      setBreakButtonState(Boolean(result.onBreak), result.onBreakExpiresAt || null);
     }
 
-    function setBreakButtonState(onBreak) {
+    let breakCountdownInterval = null;
+
+    function setBreakButtonState(onBreak, expiresAt) {
       breakToggleBtn.classList.toggle("active", onBreak);
-      breakToggleBtn.innerHTML = onBreak
-        ? "&#128701; I'm back &mdash; tap to end break"
-        : "&#128701; I need the bathroom";
+      if (breakCountdownInterval) {
+        clearInterval(breakCountdownInterval);
+        breakCountdownInterval = null;
+      }
+
+      if (onBreak && expiresAt) {
+        const update = () => {
+          const remaining = expiresAt - Date.now();
+          if (remaining <= 0) {
+            clearInterval(breakCountdownInterval);
+            breakCountdownInterval = null;
+            setBreakButtonState(false, null);
+            return;
+          }
+          const mins = Math.floor(remaining / 60000);
+          const secs = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+          breakToggleBtn.innerHTML = `&#128701; On toilet break &mdash; ${mins}:${secs} left`;
+        };
+        update();
+        breakCountdownInterval = setInterval(update, 1000);
+      } else {
+        breakToggleBtn.innerHTML = "&#128701; Toilet break";
+      }
     }
 
     async function fetchTarget(name, token) {
@@ -408,7 +430,7 @@
             showMessage(data.error || "Something went wrong.", "error");
             return;
           }
-          setBreakButtonState(data.onBreak);
+          setBreakButtonState(data.onBreak, data.onBreakExpiresAt || null);
         } catch (e) {
           console.error(e);
           showMessage("Something went wrong. Try again in a moment.", "error");

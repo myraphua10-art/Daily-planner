@@ -1,4 +1,4 @@
-import { json, getGame, assignKey, proofKey } from "../_shared.js";
+import { json, getGame, assignKey, proofKey, isOnBreak } from "../_shared.js";
 
 // Guest-facing. Reports that the caller (proven via their own claim token)
 // eliminated their current target. The eliminated player is marked out, and
@@ -46,7 +46,7 @@ export async function onRequestPost({ request, env }) {
   if (targetRecord.immune) {
     return json({ error: "Your target is currently immune - try again later." }, 400);
   }
-  if (targetRecord.onBreak) {
+  if (isOnBreak(targetRecord)) {
     return json({ error: "Your target is on a break right now - try again in a bit." }, 400);
   }
 

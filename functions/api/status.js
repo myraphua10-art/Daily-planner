@@ -1,4 +1,4 @@
-import { json, getGame, assignKey } from "../_shared.js";
+import { json, getGame, assignKey, isOnBreak } from "../_shared.js";
 
 // Public, no passcode needed - this is meant to be pulled up on a screen at
 // the party. Only ever returns each player's status (active/eliminated/won)
@@ -18,7 +18,7 @@ export async function onRequestGet({ env }) {
         status: record.status,
         eliminatedBy: record.status === "eliminated" ? record.eliminatedBy : undefined,
         immune: record.status === "active" ? Boolean(record.immune) : undefined,
-        onBreak: record.status === "active" ? Boolean(record.onBreak) : undefined,
+        onBreak: record.status === "active" ? isOnBreak(record) : undefined,
       };
     })
   );

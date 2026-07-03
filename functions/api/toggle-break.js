@@ -1,9 +1,10 @@
-import { json, getGame, assignKey } from "../_shared.js";
+import { json, getGame, assignKey, isOnBreak, BREAK_DURATION_MS } from "../_shared.js";
 
 // Guest-facing, self-service (not admin). Lets a player mark themselves as
-// temporarily safe - e.g. a bathroom break - so their hunter can see it on
+// temporarily safe - e.g. a toilet break - so their hunter can see it on
 // their own reveal, and /api/eliminate refuses to let anyone eliminate them
-// while it's on. Toggles on/off; no auto-expiry, so remember to turn it off.
+// while it's active. Auto-expires after BREAK_DURATION_MS so nobody can
+// leave it on indefinitely to dodge being caught.
 export async function onRequestPost({ request, env }) {
   const body = await request.json();
   const name = String(body.name || "").trim();
@@ -25,7 +26,18 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "Only active players can toggle this." }, 400);
   }
 
-  record.onBreak = !record.onBreak;
+  if (isOnBreak(record)) {
+    record.onBreak = false;
+    record.onBreakSince = null;
+  } else {
+    record.onBreak = true;
+    record.onBreakSince = Date.now();
+  }
   await env.ASSASSIN_KV.put(key, JSON.stringify(record));
-  return json({ ok: true, onBreak: record.onBreak });
+  return json({
+    ok: true,
+    onBreak: record.onBreak,
+    onBreakSince: record.onBreakSince,
+    onBreakExpiresAt: record.onBreakSince ? record.onBreakSince + BREAK_DURATION_MS : null,
+  });
 }
