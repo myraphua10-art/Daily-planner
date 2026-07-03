@@ -11,6 +11,7 @@ import { onRequestPost as adminPhotosPost } from "../functions/api/admin-photos.
 import { onRequestPost as setBountyPost } from "../functions/api/set-bounty.js";
 import { onRequestPost as setImmunityPost } from "../functions/api/set-immunity.js";
 import { onRequestPost as adminProofsPost } from "../functions/api/admin-proofs.js";
+import { onRequestPost as adminKillCodesPost } from "../functions/api/admin-kill-codes.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -27,6 +28,7 @@ const routes = {
   "POST /api/set-bounty": setBountyPost,
   "POST /api/set-immunity": setImmunityPost,
   "POST /api/admin-proofs": adminProofsPost,
+  "POST /api/admin-kill-codes": adminKillCodesPost,
 };
 
 export default {

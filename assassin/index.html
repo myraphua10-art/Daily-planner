@@ -35,6 +35,7 @@
     margin-bottom:12px; background:#fffdf7; font-family:"EB Garamond", Georgia, serif; color:var(--ink);
   }
   input[type="file"]{padding:10px 12px; font-size:14px;}
+  label{font-size:12.5px; font-weight:600; color:var(--sub); display:block; margin-bottom:4px; letter-spacing:.03em;}
   button{
     width:100%; padding:13px 14px; border-radius:3px; border:1px solid var(--accent); background:var(--accent); color:var(--card);
     font-size:13px; font-weight:600; cursor:pointer; letter-spacing:.12em; text-transform:uppercase;
@@ -115,6 +116,8 @@
       <p class="sub">ATTACH PROOF OF KILL<br>Funniest picture gets a prize....</p>
       <img id="proofPreview" class="photo-preview" alt="">
       <input type="file" id="proofInput" accept="image/*" capture="environment">
+      <label for="codeInput">Code from the back of their photo</label>
+      <input type="text" id="codeInput" placeholder="e.g. 7XQ2KM" autocapitalize="characters">
       <button id="submitProofBtn" disabled>Confirm Elimination</button>
       <button id="cancelProofBtn" class="secondary">Cancel</button>
     </div>
@@ -163,6 +166,7 @@
     const proofArea = document.getElementById("proofArea");
     const proofInput = document.getElementById("proofInput");
     const proofPreview = document.getElementById("proofPreview");
+    const codeInput = document.getElementById("codeInput");
     const submitProofBtn = document.getElementById("submitProofBtn");
     const cancelProofBtn = document.getElementById("cancelProofBtn");
     const hintText = document.getElementById("hintText");
@@ -366,6 +370,7 @@
       cancelProofBtn.addEventListener("click", () => {
         pendingProofDataUrl = null;
         proofInput.value = "";
+        codeInput.value = "";
         proofPreview.classList.remove("shown");
         submitProofBtn.disabled = true;
         proofArea.classList.add("hidden");
@@ -388,12 +393,20 @@
 
       submitProofBtn.addEventListener("click", async () => {
         if (!pendingProofDataUrl) return;
+        if (!codeInput.value.trim()) {
+          showMessage("Enter the code from the back of their photo.", "error");
+          return;
+        }
         submitProofBtn.disabled = true;
         try {
           const res = await fetch("/api/eliminate", {
             method: "POST",
             headers: { "x-claim-token": currentToken, "content-type": "application/json" },
-            body: JSON.stringify({ name: currentName, proofPhotoDataUrl: pendingProofDataUrl }),
+            body: JSON.stringify({
+              name: currentName,
+              proofPhotoDataUrl: pendingProofDataUrl,
+              killCode: codeInput.value.trim(),
+            }),
           });
           const data = await res.json();
           if (!res.ok) {

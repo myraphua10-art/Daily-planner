@@ -103,6 +103,11 @@
     <button id="loadProofsBtn">Load proof photos</button>
     <div id="proofGrid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px;"></div>
 
+    <h2>Kill codes</h2>
+    <p class="sub">Write each code on the back of that person's printed photo/polaroid before the party. Whoever eliminates them has to enter it as proof they actually got the right photo. These are per-person, not pairings, so this is safe to view.</p>
+    <button id="loadCodesBtn">Load kill codes</button>
+    <div id="codesResult" style="margin-top:10px; font-size:14px;"></div>
+
     <h2>Bounty target</h2>
     <p class="sub">Pick one active player as a public "high-value target" for a limited time - shown on the status board and guest pages. Any real prize/bragging rights are up to you in person. Leave the name blank and click Set to clear it.</p>
     <div class="row">
@@ -361,6 +366,25 @@
           .join("");
       } catch (e) {
         grid.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
+
+    document.getElementById("loadCodesBtn").addEventListener("click", async () => {
+      const el = document.getElementById("codesResult");
+      el.innerHTML = "Loading...";
+      try {
+        const res = await fetch("/api/admin-kill-codes", {
+          method: "POST",
+          headers: adminHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load codes.");
+        el.innerHTML = data.rows
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((r) => `<div>${r.name}: <b>${r.killCode || "-"}</b></div>`)
+          .join("");
+      } catch (e) {
+        el.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
     });
 
