@@ -116,6 +116,15 @@
     <p class="sub">See who has uploaded a photo of themselves so far. This doesn't show any pairings.</p>
     <button id="loadPhotosBtn">Load photos</button>
     <div id="photoGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;"></div>
+
+    <h2>Force a pairing</h2>
+    <p class="sub">Rewires the live game so the hunter targets exactly who you specify, without disturbing anyone else's claim, photo, or target. Only works while everyone involved (including whoever currently hunts each of them) is still active.</p>
+    <div class="row">
+      <div><input type="text" id="rigHunterInput" placeholder="Hunter's exact name"></div>
+      <div><input type="text" id="rigTargetInput" placeholder="Target's exact name"></div>
+    </div>
+    <button id="rigBtn" class="danger">Force this pairing</button>
+    <div id="rigResult"></div>
   </div>
 
   <script type="module">
@@ -352,6 +361,29 @@
           .join("");
       } catch (e) {
         grid.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
+
+    document.getElementById("rigBtn").addEventListener("click", async () => {
+      const hunter = document.getElementById("rigHunterInput").value.trim();
+      const target = document.getElementById("rigTargetInput").value.trim();
+      const resultEl = document.getElementById("rigResult");
+      if (!hunter || !target) return;
+      if (!confirm(`Force ${hunter} to target ${target}? This changes the live game.`)) return;
+      resultEl.innerHTML = "";
+      try {
+        const res = await fetch("/api/rig-pairing", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ hunter, target }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to rig that pairing.");
+        resultEl.innerHTML = `<div class="msg success">${hunter} now targets ${target}.</div>`;
+        document.getElementById("rigHunterInput").value = "";
+        document.getElementById("rigTargetInput").value = "";
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
     });
   </script>
