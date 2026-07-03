@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assassin - Live Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{ --paper:#f3efe2; --card:#faf7ee; --ink:#211f1a; --sub:#6e6a5c; --line:#ded6bf; --accent:#1c1a15; --gold:#a4762f; }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; font-family:"EB Garamond", Georgia, serif;
+    background:var(--paper); color:var(--ink);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .card{
+    position:relative; background:var(--card); border:1px solid var(--line); border-radius:6px;
+    box-shadow:0 6px 30px rgba(30,26,16,0.10);
+    padding:36px 30px; max-width:460px; width:100%; overflow:hidden;
+  }
+  .sparkle{position:absolute; opacity:.5; color:var(--ink);}
+  .sparkle.s1{top:14px; right:22px; font-size:20px;}
+  .sparkle.s2{bottom:18px; left:20px; font-size:14px;}
+  h1{
+    font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700;
+    font-size:30px; margin:0 0 6px; text-align:center;
+  }
+  p.sub{color:var(--sub); font-size:14.5px; margin:0 0 24px; line-height:1.5; text-align:center;}
+  .count{text-align:center; font-size:14px; color:var(--sub); margin-bottom:18px; letter-spacing:.06em; text-transform:uppercase;}
+  .count b{color:var(--ink); font-size:17px;}
+  ul{list-style:none; margin:0; padding:0;}
+  li{
+    display:flex; justify-content:space-between; align-items:center; padding:12px 4px;
+    border-bottom:1px solid var(--line); font-size:16px;
+  }
+  li:last-child{border-bottom:none;}
+  .badge{font-size:11px; text-transform:uppercase; letter-spacing:.08em; padding:4px 10px; border-radius:20px;}
+  .badge.active{background:#eef1e6; color:#3d4a2f;}
+  .badge.eliminated{background:#f1efe4; color:var(--sub);}
+  .badge.won{background:var(--gold); color:#fff8ea;}
+  li.eliminated .pname{color:var(--sub); text-decoration:line-through;}
+  .elim-note{font-size:12px; color:var(--sub); font-style:italic; margin-top:2px;}
+  .msg{font-size:14px; padding:12px 14px; border-radius:3px; border:1px solid var(--line); background:#f1efe4; color:#544f3f; text-align:center;}
+  .refresh{
+    display:block; width:100%; margin-top:22px; padding:12px; border-radius:3px; border:1px solid var(--accent);
+    background:transparent; color:var(--accent); font-family:inherit; font-size:13px; letter-spacing:.1em;
+    text-transform:uppercase; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <span class="sparkle s1">&#10022;</span>
+    <span class="sparkle s2">&#10022;</span>
+    <h1>Who's Still In</h1>
+    <p class="sub">Live status only - nobody's target is ever shown here, not even Myra's.</p>
+    <div id="content"></div>
+    <button class="refresh" id="refreshBtn">Refresh</button>
+  </div>
+
+  <script type="module">
+    const content = document.getElementById("content");
+
+    function statusBadge(p) {
+      if (p.status === "won") return `<span class="badge won">Champion</span>`;
+      if (p.status === "eliminated") return `<span class="badge eliminated">Out</span>`;
+      return `<span class="badge active">Active</span>`;
+    }
+
+    async function load() {
+      content.innerHTML = `<div class="msg">Loading...</div>`;
+      try {
+        const res = await fetch("/api/status");
+        const data = await res.json();
+
+        if (!data.locked) {
+          content.innerHTML = `<div class="msg">Targets haven't been generated yet.</div>`;
+          return;
+        }
+
+        const activeCount = data.players.filter((p) => p.status !== "eliminated").length;
+        const winner = data.players.find((p) => p.status === "won");
+
+        const rows = data.players
+          .slice()
+          .sort((a, b) => {
+            const order = { won: 0, active: 1, eliminated: 2 };
+            return order[a.status] - order[b.status] || a.name.localeCompare(b.name);
+          })
+          .map((p) => `
+            <li class="${p.status}">
+              <div>
+                <div class="pname">${p.name}</div>
+                ${p.eliminatedBy ? `<div class="elim-note">eliminated by ${p.eliminatedBy}</div>` : ""}
+              </div>
+              ${statusBadge(p)}
+            </li>
+          `)
+          .join("");
+
+        content.innerHTML = `
+          <div class="count">${winner ? `&#10022; ${winner.name} wins &#10022;` : `<b>${activeCount}</b> still hunting`}</div>
+          <ul>${rows}</ul>
+        `;
+      } catch (e) {
+        console.error(e);
+        content.innerHTML = `<div class="msg">Couldn't load status. Check your connection.</div>`;
+      }
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", load);
+    load();
+  </script>
+</body>
+</html>
