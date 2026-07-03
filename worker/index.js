@@ -8,7 +8,6 @@ import { onRequestPost as claimPost } from "../functions/api/claim.js";
 import { onRequestPost as undoEliminatePost } from "../functions/api/undo-eliminate.js";
 import { onRequestGet as statusGet } from "../functions/api/status.js";
 import { onRequestPost as adminPhotosPost } from "../functions/api/admin-photos.js";
-import { onRequestPost as adminFullMappingPost } from "../functions/api/admin-full-mapping.js";
 import { onRequestPost as setBountyPost } from "../functions/api/set-bounty.js";
 import { onRequestPost as setImmunityPost } from "../functions/api/set-immunity.js";
 
@@ -24,7 +23,6 @@ const routes = {
   "POST /api/undo-eliminate": undoEliminatePost,
   "GET /api/status": statusGet,
   "POST /api/admin-photos": adminPhotosPost,
-  "POST /api/admin-full-mapping": adminFullMappingPost,
   "POST /api/set-bounty": setBountyPost,
   "POST /api/set-immunity": setImmunityPost,
 };

@@ -68,17 +68,6 @@
     <h2>Guest list (one name per line)</h2>
     <textarea id="playersInput"></textarea>
 
-    <div class="row">
-      <div>
-        <label for="hunterInput">Rigged hunter</label>
-        <input type="text" id="hunterInput" value="Jayna">
-      </div>
-      <div>
-        <label for="targetInput">Rigged target</label>
-        <input type="text" id="targetInput" value="Myra">
-      </div>
-    </div>
-
     <button id="saveListBtn">Save guest list</button>
 
     <h2>Generate &amp; lock</h2>
@@ -109,11 +98,6 @@
     <button id="loadPhotosBtn">Load photos</button>
     <div id="photoGrid" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;"></div>
 
-    <h2>Emergency: full mapping</h2>
-    <p class="sub">Only for fixing a mistake - dumps the entire current hunter -&gt; target list at once, unlike the one-at-a-time lookup above.</p>
-    <button id="loadFullMappingBtn">Load full mapping</button>
-    <div id="fullMappingResult" style="margin-top:10px; font-size:14px;"></div>
-
     <h2>Bounty target</h2>
     <p class="sub">Pick one active player as a public "high-value target" for a limited time - shown on the status board and guest pages. Any real prize/bragging rights are up to you in person. Leave the name blank and click Set to clear it.</p>
     <div class="row">
@@ -139,6 +123,8 @@
       "Isabelle", "Adia", "Myra", "Rainie", "Elizabeth", "Charice", "Nicole",
       "Jayna", "Violet", "Ana", "Laetitia", "Katelyn", "Qingyang",
     ];
+    const RIGGED_HUNTER = "Jayna";
+    const RIGGED_TARGET = "Myra";
 
     let adminPasscode = "";
 
@@ -147,8 +133,6 @@
     const gateMsg = document.getElementById("gateMsg");
     const statusArea = document.getElementById("statusArea");
     const playersInput = document.getElementById("playersInput");
-    const hunterInput = document.getElementById("hunterInput");
-    const targetInput = document.getElementById("targetInput");
     const linkSection = document.getElementById("linkSection");
     const guestLink = document.getElementById("guestLink");
 
@@ -193,8 +177,6 @@
       const game = await res.json();
 
       playersInput.value = (game.players?.length ? game.players : DEFAULT_PLAYERS).join("\n");
-      hunterInput.value = game.riggedHunter || "Jayna";
-      targetInput.value = game.riggedTarget || "Myra";
 
       if (game.locked) {
         showStatus("Game is locked. Targets have been generated and links are live.", "success");
@@ -207,8 +189,6 @@
 
     function setEditingDisabled(disabled) {
       playersInput.disabled = disabled;
-      hunterInput.disabled = disabled;
-      targetInput.disabled = disabled;
       document.getElementById("saveListBtn").disabled = disabled;
       document.getElementById("generateBtn").disabled = disabled;
     }
@@ -235,8 +215,8 @@
           headers: adminHeaders({ "content-type": "application/json" }),
           body: JSON.stringify({
             players,
-            riggedHunter: hunterInput.value.trim(),
-            riggedTarget: targetInput.value.trim(),
+            riggedHunter: RIGGED_HUNTER,
+            riggedTarget: RIGGED_TARGET,
           }),
         });
         const data = await res.json();
@@ -261,8 +241,8 @@
           headers: adminHeaders({ "content-type": "application/json" }),
           body: JSON.stringify({
             players,
-            riggedHunter: hunterInput.value.trim(),
-            riggedTarget: targetInput.value.trim(),
+            riggedHunter: RIGGED_HUNTER,
+            riggedTarget: RIGGED_TARGET,
           }),
         });
         const saveData = await saveRes.json();
@@ -345,30 +325,6 @@
           .join("");
       } catch (e) {
         grid.innerHTML = `<div class="msg error">${e.message}</div>`;
-      }
-    });
-
-    document.getElementById("loadFullMappingBtn").addEventListener("click", async () => {
-      const el = document.getElementById("fullMappingResult");
-      el.innerHTML = "Loading...";
-      try {
-        const res = await fetch("/api/admin-full-mapping", {
-          method: "POST",
-          headers: adminHeaders(),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to load.");
-        el.innerHTML = data.rows
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((r) => {
-            if (r.status === "eliminated") return `${r.name} &mdash; OUT (eliminated by ${r.eliminatedBy})`;
-            if (r.status === "won") return `${r.name} &mdash; WON`;
-            return `${r.name} &rarr; ${r.targetName} ${r.claimed ? "" : "(not claimed yet)"}`;
-          })
-          .map((line) => `<div>${line}</div>`)
-          .join("");
-      } catch (e) {
-        el.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
     });
 
