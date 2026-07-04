@@ -126,6 +126,9 @@
 
     <button id="breakToggleBtn" class="break-btn hidden">Toilet break</button>
 
+    <button id="changePhotoBtn" class="break-btn hidden">Change my photo</button>
+    <input type="file" id="changePhotoInput" accept="image/*" class="hidden">
+
     <div id="proofArea" class="hidden">
       <p class="sub">ATTACH PROOF OF KILL<br>Funniest picture gets a prize....</p>
       <img id="proofPreview" class="photo-preview" alt="">
@@ -178,6 +181,8 @@
     const killBtn = document.getElementById("killBtn");
     const targetBreakBanner = document.getElementById("targetBreakBanner");
     const breakToggleBtn = document.getElementById("breakToggleBtn");
+    const changePhotoBtn = document.getElementById("changePhotoBtn");
+    const changePhotoInput = document.getElementById("changePhotoInput");
     const proofArea = document.getElementById("proofArea");
     const proofInput = document.getElementById("proofInput");
     const proofPreview = document.getElementById("proofPreview");
@@ -211,6 +216,7 @@
       revealArea.classList.remove("eliminated", "won");
       targetBreakBanner.classList.add("hidden");
       breakToggleBtn.classList.add("hidden");
+      changePhotoBtn.classList.remove("hidden");
 
       if (result.eliminated) {
         revealArea.classList.add("eliminated");
@@ -442,6 +448,34 @@
         killBtn.classList.add("hidden");
         breakToggleBtn.classList.add("hidden");
         proofArea.classList.remove("hidden");
+      });
+
+      changePhotoBtn.addEventListener("click", () => changePhotoInput.click());
+
+      changePhotoInput.addEventListener("change", async () => {
+        const file = changePhotoInput.files[0];
+        if (!file) return;
+        changePhotoBtn.disabled = true;
+        try {
+          const resized = await resizeImage(file);
+          const res = await fetch("/api/update-photo", {
+            method: "POST",
+            headers: { "x-claim-token": currentToken, "content-type": "application/json" },
+            body: JSON.stringify({ name: currentName, photoDataUrl: resized }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            showMessage(data.error || "Something went wrong.", "error");
+            return;
+          }
+          showMessage("Photo updated.", "info");
+        } catch (e) {
+          console.error(e);
+          showMessage("Something went wrong. Try again in a moment.", "error");
+        } finally {
+          changePhotoBtn.disabled = false;
+          changePhotoInput.value = "";
+        }
       });
 
       breakToggleBtn.addEventListener("click", async () => {
