@@ -103,7 +103,7 @@
 
     <div id="pickArea">
       <select id="nameSelect"></select>
-      <input type="text" id="birthdayInput" placeholder="Your birthday (DD/MM)" inputmode="numeric" maxlength="5">
+      <input type="text" id="birthdayInput" placeholder="Your birthday (DDMM, e.g. 0609)" inputmode="numeric" maxlength="5">
       <button id="claimBtn">This Is Me &mdash; Show My Target</button>
     </div>
 
@@ -184,6 +184,13 @@
     const submitProofBtn = document.getElementById("submitProofBtn");
     const cancelProofBtn = document.getElementById("cancelProofBtn");
     const hintText = document.getElementById("hintText");
+
+    // Numeric mobile keypads have no "/" key, so auto-insert it after the
+    // day digits rather than asking guests to type one.
+    birthdayInput.addEventListener("input", () => {
+      const digits = birthdayInput.value.replace(/\D/g, "").slice(0, 4);
+      birthdayInput.value = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+    });
 
     let currentName = null;
     let currentToken = null;
