@@ -122,8 +122,8 @@
 
     <div id="followArea" class="follow-note hidden"></div>
 
-    <button id="paparazziBtn" class="text-btn hidden">Upload documentation photo</button>
-    <input type="file" id="paparazziInput" accept="image/*" class="hidden">
+    <button id="paparazziBtn" class="text-btn hidden">Upload documentation photo/video</button>
+    <input type="file" id="paparazziInput" accept="image/*,video/*" class="hidden">
 
     <button id="killBtn" class="kill-btn hidden">I Got Them</button>
 
@@ -455,18 +455,40 @@
         if (!file) return;
         paparazziBtn.disabled = true;
         try {
-          const resized = await resizeImage(file);
-          const res = await fetch("/api/upload-paparazzi", {
-            method: "POST",
-            headers: { "x-claim-token": currentToken, "content-type": "application/json" },
-            body: JSON.stringify({ name: currentName, photoDataUrl: resized }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            showMessage(data.error || "Something went wrong.", "error");
-            return;
+          if (file.type.startsWith("video/")) {
+            if (file.size > 50 * 1024 * 1024) {
+              showMessage("That video is too large - keep clips under 50MB.", "error");
+              return;
+            }
+            const res = await fetch("/api/upload-paparazzi", {
+              method: "POST",
+              headers: {
+                "x-claim-token": currentToken,
+                "x-uploader-name": currentName,
+                "content-type": file.type,
+              },
+              body: file,
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              showMessage(data.error || "Something went wrong.", "error");
+              return;
+            }
+            showMessage("Video uploaded! Keep the documentation coming.", "info");
+          } else {
+            const resized = await resizeImage(file);
+            const res = await fetch("/api/upload-paparazzi", {
+              method: "POST",
+              headers: { "x-claim-token": currentToken, "content-type": "application/json" },
+              body: JSON.stringify({ name: currentName, photoDataUrl: resized }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              showMessage(data.error || "Something went wrong.", "error");
+              return;
+            }
+            showMessage("Uploaded! Keep the documentation coming.", "info");
           }
-          showMessage("Uploaded! Keep the documentation coming.", "info");
         } catch (e) {
           console.error(e);
           showMessage("Something went wrong. Try again in a moment.", "error");

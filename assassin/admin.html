@@ -120,8 +120,8 @@
     <button id="downloadProofsBtn" class="hidden" style="margin-top:8px;">Download selected</button>
 
     <h2>Paparazzi documentation</h2>
-    <p class="sub">Once someone's eliminated, they're assigned to follow and document whoever got them. Every photo they submit shows up here - tick your favourites and download them.</p>
-    <button id="loadPaparazziBtn">Load documentation photos</button>
+    <p class="sub">Once someone's eliminated, they're assigned to follow and document whoever got them. Every photo or video they submit shows up here - tick your favourites and download them. Videos show as a &#127909; placeholder until you download them.</p>
+    <button id="loadPaparazziBtn">Load documentation photos/videos</button>
     <div id="paparazziGrid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px;"></div>
     <div id="paparazziSelectRow" class="hidden" style="display:flex; gap:8px; margin-top:10px;">
       <button id="paparazziSelectAllBtn" type="button" style="flex:1;">Select all</button>
@@ -383,10 +383,17 @@
       return ext;
     }
 
+    function extFromVideoKey(key) {
+      const m = /\.([a-zA-Z0-9]+)$/.exec(key);
+      return m ? m[1] : "mp4";
+    }
+
     // Photos are already sitting in the browser as data URIs once loaded, so
     // "downloading" just means triggering a save for each checked one - no
-    // extra server round-trip or zip library needed. A short delay between
-    // each keeps browsers from blocking a burst of simultaneous downloads.
+    // extra server round-trip needed. Videos live in R2, not inline, so each
+    // one is fetched (with the admin header, since a plain <a href> can't
+    // send one) into a blob just before its own download triggers. A short
+    // delay between each keeps browsers from blocking a burst of downloads.
     async function downloadChecked(gridId, items, buttonEl) {
       const checks = document.querySelectorAll(`#${gridId} .photo-check:checked`);
       if (!checks.length) return;
@@ -397,8 +404,22 @@
         const item = items[Number(cb.dataset.index)];
         if (!item) continue;
         i++;
-        downloadDataUrl(item.dataUrl, `${item.name.replace(/\s+/g, "-")}.${extFromDataUrl(item.dataUrl)}`);
         buttonEl.textContent = `Downloading ${i} / ${checks.length}...`;
+        if (item.videoKey) {
+          try {
+            const res = await fetch(`/api/admin-paparazzi-file?key=${encodeURIComponent(item.videoKey)}`, {
+              headers: adminHeaders(),
+            });
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            downloadDataUrl(blobUrl, `${item.name.replace(/\s+/g, "-")}.${extFromVideoKey(item.videoKey)}`);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          downloadDataUrl(item.dataUrl, `${item.name.replace(/\s+/g, "-")}.${extFromDataUrl(item.dataUrl)}`);
+        }
         await new Promise((r) => setTimeout(r, 400));
       }
       buttonEl.textContent = originalText;
@@ -536,15 +557,20 @@
           grid.innerHTML = `<div class="msg info">No documentation photos yet.</div>`;
           return;
         }
-        loadedPaparazzi = data.entries.map((entry, i) => ({
-          name: `${entry.uploader}-documenting-${entry.subject}-${i}`,
-          dataUrl: entry.photoDataUrl,
-        }));
+        loadedPaparazzi = data.entries.map((entry, i) =>
+          entry.videoKey
+            ? { name: `${entry.uploader}-documenting-${entry.subject}-${i}`, videoKey: entry.videoKey }
+            : { name: `${entry.uploader}-documenting-${entry.subject}-${i}`, dataUrl: entry.photoDataUrl }
+        );
         grid.innerHTML = data.entries
           .map((entry, i) => `
             <div style="position:relative; text-align:center;">
               <input type="checkbox" class="photo-check" data-index="${i}" style="position:absolute; top:6px; left:6px; width:18px; height:18px; z-index:2;">
-              <img src="${entry.photoDataUrl}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px; border:1px solid var(--line);">
+              ${
+                entry.videoKey
+                  ? `<div style="width:100%; aspect-ratio:1; border-radius:3px; border:1px solid var(--line); background:#efe9d8; display:flex; align-items:center; justify-content:center; font-size:28px;">&#127909;</div>`
+                  : `<img src="${entry.photoDataUrl}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px; border:1px solid var(--line);">`
+              }
               <div style="font-size:12px; margin-top:4px;">${entry.uploader} documenting ${entry.subject}</div>
               <div style="font-size:10.5px; color:var(--sub);">${new Date(entry.submittedAt).toLocaleString()}</div>
             </div>

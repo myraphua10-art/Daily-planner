@@ -16,3 +16,8 @@ id = "c47c1406dc294c23868a296d9ec5b39a"
 # ADMIN_PASSCODE is set as a secret via the dashboard (Worker -> Settings ->
 # Variables and Secrets), not here - so it never ends up in the repo.
 # (redeploy trigger 2026-07-01T14:44:42Z)
+
+# Video documentation uploads - too large for KV, so they go to R2 instead.
+[[r2_buckets]]
+binding = "PAPARAZZI_BUCKET"
+bucket_name = "assassin-documentation"

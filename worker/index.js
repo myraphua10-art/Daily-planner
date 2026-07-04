@@ -15,6 +15,7 @@ import { onRequestPost as setBirthdaysPost } from "../functions/api/set-birthday
 import { onRequestPost as updatePhotoPost } from "../functions/api/update-photo.js";
 import { onRequestPost as uploadPaparazziPost } from "../functions/api/upload-paparazzi.js";
 import { onRequestPost as adminPaparazziPost } from "../functions/api/admin-paparazzi.js";
+import { onRequestGet as adminPaparazziFileGet } from "../functions/api/admin-paparazzi-file.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -35,6 +36,7 @@ const routes = {
   "POST /api/update-photo": updatePhotoPost,
   "POST /api/upload-paparazzi": uploadPaparazziPost,
   "POST /api/admin-paparazzi": adminPaparazziPost,
+  "GET /api/admin-paparazzi-file": adminPaparazziFileGet,
 };
 
 export default {
