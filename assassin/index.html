@@ -77,15 +77,15 @@
     text-align:center; font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
     color:var(--gold); background:#f6efe0; border:1px solid #e3cfa1; border-radius:3px; padding:8px 10px; margin-bottom:16px;
   }
-  .break-banner{
-    text-align:center; font-size:12.5px; font-weight:600; color:#2f4a5a; background:#e6eef6;
-    border:1px solid #c3d6e5; border-radius:3px; padding:8px 10px; margin-top:12px;
-  }
-  button.break-btn{
+  button.text-btn{
     background:transparent; border:none; color:var(--sub); margin-top:10px;
     font-weight:600; font-size:13px; letter-spacing:normal; text-transform:none; box-shadow:none;
   }
-  button.break-btn.active{color:#2f4a5a;}
+  .follow-note{
+    text-align:center; font-size:13.5px; color:#544f3f; background:#f6efe0; border:1px solid #e3cfa1;
+    border-radius:3px; padding:10px 12px; margin-top:12px; line-height:1.5;
+  }
+  .follow-note b{color:var(--gold); font-family:"Playfair Display", Georgia, serif; font-style:italic;}
   .hidden{display:none;}
 </style>
 </head>
@@ -120,13 +120,11 @@
       <div class="target" id="revealText">-</div>
     </div>
 
-    <div id="targetBreakBanner" class="break-banner hidden">Your target is on a toilet break &mdash; hold off!</div>
+    <div id="followArea" class="follow-note hidden"></div>
 
     <button id="killBtn" class="kill-btn hidden">I Got Them</button>
 
-    <button id="breakToggleBtn" class="break-btn hidden">Toilet break</button>
-
-    <button id="changePhotoBtn" class="break-btn hidden">Change my photo</button>
+    <button id="changePhotoBtn" class="text-btn hidden">Change my photo</button>
     <input type="file" id="changePhotoInput" accept="image/*" class="hidden">
 
     <div id="proofArea" class="hidden">
@@ -178,9 +176,8 @@
     const revealLabel = document.getElementById("revealLabel");
     const revealText = document.getElementById("revealText");
     const dossierPhoto = document.getElementById("dossierPhoto");
+    const followArea = document.getElementById("followArea");
     const killBtn = document.getElementById("killBtn");
-    const targetBreakBanner = document.getElementById("targetBreakBanner");
-    const breakToggleBtn = document.getElementById("breakToggleBtn");
     const changePhotoBtn = document.getElementById("changePhotoBtn");
     const changePhotoInput = document.getElementById("changePhotoInput");
     const proofArea = document.getElementById("proofArea");
@@ -214,9 +211,8 @@
       proofArea.classList.add("hidden");
       revealArea.classList.remove("hidden");
       revealArea.classList.remove("eliminated", "won");
-      targetBreakBanner.classList.add("hidden");
-      breakToggleBtn.classList.add("hidden");
       changePhotoBtn.classList.remove("hidden");
+      followArea.classList.add("hidden");
 
       if (result.eliminated) {
         revealArea.classList.add("eliminated");
@@ -225,6 +221,10 @@
         revealText.textContent = result.eliminatedBy ? `by ${result.eliminatedBy}` : "Better luck next time!";
         killBtn.classList.add("hidden");
         hintText.textContent = "Thanks for playing! Stick around to see who wins.";
+        if (result.following) {
+          followArea.innerHTML = `Follow <b>${result.following.name}</b> around and document their game - they've got ${result.following.kills} kill${result.following.kills === 1 ? "" : "s"} so far.`;
+          followArea.classList.remove("hidden");
+        }
         return;
       }
 
@@ -248,42 +248,6 @@
       revealText.textContent = result.targetName;
       killBtn.classList.remove("hidden");
       hintText.textContent = "Keep this to yourself. If you switch phones and lose access, ask me to reset your name.";
-
-      if (result.targetOnBreak) {
-        targetBreakBanner.classList.remove("hidden");
-      }
-
-      breakToggleBtn.classList.remove("hidden");
-      setBreakButtonState(Boolean(result.onBreak), result.onBreakExpiresAt || null);
-    }
-
-    let breakCountdownInterval = null;
-
-    function setBreakButtonState(onBreak, expiresAt) {
-      breakToggleBtn.classList.toggle("active", onBreak);
-      if (breakCountdownInterval) {
-        clearInterval(breakCountdownInterval);
-        breakCountdownInterval = null;
-      }
-
-      if (onBreak && expiresAt) {
-        const update = () => {
-          const remaining = expiresAt - Date.now();
-          if (remaining <= 0) {
-            clearInterval(breakCountdownInterval);
-            breakCountdownInterval = null;
-            setBreakButtonState(false, null);
-            return;
-          }
-          const mins = Math.floor(remaining / 60000);
-          const secs = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
-          breakToggleBtn.innerHTML = `On toilet break &mdash; ${mins}:${secs} left`;
-        };
-        update();
-        breakCountdownInterval = setInterval(update, 1000);
-      } else {
-        breakToggleBtn.innerHTML = "Toilet break";
-      }
     }
 
     async function fetchTarget(name, token, birthday) {
@@ -446,7 +410,6 @@
 
       killBtn.addEventListener("click", () => {
         killBtn.classList.add("hidden");
-        breakToggleBtn.classList.add("hidden");
         proofArea.classList.remove("hidden");
       });
 
@@ -478,28 +441,6 @@
         }
       });
 
-      breakToggleBtn.addEventListener("click", async () => {
-        breakToggleBtn.disabled = true;
-        try {
-          const res = await fetch("/api/toggle-break", {
-            method: "POST",
-            headers: { "x-claim-token": currentToken, "content-type": "application/json" },
-            body: JSON.stringify({ name: currentName }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            showMessage(data.error || "Something went wrong.", "error");
-            return;
-          }
-          setBreakButtonState(data.onBreak, data.onBreakExpiresAt || null);
-        } catch (e) {
-          console.error(e);
-          showMessage("Something went wrong. Try again in a moment.", "error");
-        } finally {
-          breakToggleBtn.disabled = false;
-        }
-      });
-
       cancelProofBtn.addEventListener("click", () => {
         pendingProofDataUrl = null;
         proofInput.value = "";
@@ -507,7 +448,6 @@
         submitProofBtn.disabled = true;
         proofArea.classList.add("hidden");
         killBtn.classList.remove("hidden");
-        breakToggleBtn.classList.remove("hidden");
       });
 
       proofInput.addEventListener("change", async () => {

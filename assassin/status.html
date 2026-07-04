@@ -43,6 +43,7 @@
   .badge.immune{background:#e6eef6; color:#2f4a5a; margin-left:6px;}
   li.eliminated .pname{color:var(--sub); text-decoration:line-through;}
   .elim-note{font-size:12px; color:var(--sub); font-style:italic; margin-top:2px;}
+  .kill-count{font-size:12px; color:var(--sub); margin-top:2px;}
   .bounty-note{
     text-align:center; font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
     color:var(--gold); background:#f6efe0; border:1px solid #e3cfa1; border-radius:3px; padding:8px 10px; margin-bottom:16px;
@@ -99,8 +100,9 @@
               <div>
                 <div class="pname">${p.name}${p.name === data.bountyTarget ? " &#127919;" : ""}</div>
                 ${p.eliminatedBy ? `<div class="elim-note">eliminated by ${p.eliminatedBy}</div>` : ""}
+                <div class="kill-count">${p.kills} kill${p.kills === 1 ? "" : "s"}</div>
               </div>
-              <div>${statusBadge(p)}${p.immune ? `<span class="badge immune">Immune</span>` : ""}${p.onBreak ? `<span class="badge immune">Toilet</span>` : ""}</div>
+              <div>${statusBadge(p)}${p.immune ? `<span class="badge immune">Immune</span>` : ""}</div>
             </li>
           `)
           .join("");

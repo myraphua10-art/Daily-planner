@@ -1,4 +1,4 @@
-import { json, getGame, assignKey, proofKey, isOnBreak } from "../_shared.js";
+import { json, getGame, assignKey, proofKey } from "../_shared.js";
 
 // Guest-facing. Reports that the caller (proven via their own claim token)
 // eliminated their current target. The eliminated player is marked out, and
@@ -46,15 +46,38 @@ export async function onRequestPost({ request, env }) {
   if (targetRecord.immune) {
     return json({ error: "Your target is currently immune - try again later." }, 400);
   }
-  if (isOnBreak(targetRecord)) {
-    return json({ error: "Your target is on a break right now - try again in a bit." }, 400);
-  }
+
+  const eliminatedName = hunter.targetName;
 
   targetRecord.status = "eliminated";
   targetRecord.eliminatedBy = match;
   targetRecord.eliminatedAt = Date.now();
+  // The person just eliminated now follows their killer around to document
+  // the rest of their game (photos/videos, for the host to collect later).
+  targetRecord.following = match;
   await env.ASSASSIN_KV.put(targetKey, JSON.stringify(targetRecord));
-  await env.ASSASSIN_KV.put(proofKey(hunter.targetName), proofPhotoDataUrl);
+  await env.ASSASSIN_KV.put(proofKey(eliminatedName), proofPhotoDataUrl);
+
+  // Anyone who was already following the person who just got eliminated
+  // (because that person had eliminated them earlier in the game) needs to
+  // be pointed at the new killer instead, so nobody is stuck "following"
+  // someone who is also out.
+  await Promise.all(
+    game.players
+      .filter((p) => p.toLowerCase() !== match.toLowerCase() && p.toLowerCase() !== eliminatedName.toLowerCase())
+      .map(async (p) => {
+        const key = assignKey(p);
+        const raw = await env.ASSASSIN_KV.get(key);
+        if (!raw) return;
+        const rec = JSON.parse(raw);
+        if (rec.status === "eliminated" && rec.following && rec.following.toLowerCase() === eliminatedName.toLowerCase()) {
+          rec.following = match;
+          await env.ASSASSIN_KV.put(key, JSON.stringify(rec));
+        }
+      })
+  );
+
+  hunter.kills = (hunter.kills || 0) + 1;
 
   const nextTarget = targetRecord.targetName;
 

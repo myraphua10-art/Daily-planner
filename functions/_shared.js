@@ -53,39 +53,29 @@ export function proofKey(name) {
   return `proof:${slugify(name)}`;
 }
 
-// Toilet breaks auto-expire so nobody can sit "on break" indefinitely to
-// dodge being eliminated. Time-limited rather than a plain boolean toggle.
-export const BREAK_DURATION_MS = 3 * 60 * 1000;
-
-export function isOnBreak(record) {
-  return Boolean(
-    record.onBreak && record.onBreakSince && Date.now() - record.onBreakSince < BREAK_DURATION_MS
-  );
-}
-
 // Shared shape for a hunter's reveal, whether they just claimed their name
 // or are revisiting. Looks up the current target's photo (if that person has
 // uploaded one yet) fresh each time, so it stays current as the chain shifts.
-// Also reports whether the target is currently on a break - that's not new
-// information for the hunter (they already know their own target's name),
-// just a live status flag on someone they can already see.
 export async function buildReveal(env, record, token) {
   if (record.status === "eliminated") {
-    return { eliminated: true, eliminatedBy: record.eliminatedBy, claimToken: token };
+    // "following" is reassigned by /api/eliminate whenever the person they
+    // were following also goes out, so it's always whoever is currently
+    // still alive - read fresh rather than trusting a stale kill count.
+    let following = null;
+    if (record.following) {
+      const followingRaw = await env.ASSASSIN_KV.get(assignKey(record.following));
+      const followingRecord = followingRaw ? JSON.parse(followingRaw) : null;
+      following = { name: record.following, kills: followingRecord?.kills || 0 };
+    }
+    return { eliminated: true, eliminatedBy: record.eliminatedBy, following, claimToken: token };
   }
   if (record.status === "won") {
     return { won: true, claimToken: token };
   }
   const targetPhoto = await env.ASSASSIN_KV.get(photoKey(record.targetName));
-  const targetRaw = await env.ASSASSIN_KV.get(assignKey(record.targetName));
-  const targetRecord = targetRaw ? JSON.parse(targetRaw) : null;
-  const selfOnBreak = isOnBreak(record);
   return {
     targetName: record.targetName,
     targetPhoto: targetPhoto || null,
-    targetOnBreak: targetRecord ? isOnBreak(targetRecord) : false,
-    onBreak: selfOnBreak,
-    onBreakExpiresAt: selfOnBreak ? record.onBreakSince + BREAK_DURATION_MS : null,
     claimToken: token,
   };
 }

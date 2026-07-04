@@ -11,7 +11,6 @@ import { onRequestPost as adminPhotosPost } from "../functions/api/admin-photos.
 import { onRequestPost as setBountyPost } from "../functions/api/set-bounty.js";
 import { onRequestPost as setImmunityPost } from "../functions/api/set-immunity.js";
 import { onRequestPost as adminProofsPost } from "../functions/api/admin-proofs.js";
-import { onRequestPost as toggleBreakPost } from "../functions/api/toggle-break.js";
 import { onRequestPost as setBirthdaysPost } from "../functions/api/set-birthdays.js";
 import { onRequestPost as updatePhotoPost } from "../functions/api/update-photo.js";
 
@@ -30,7 +29,6 @@ const routes = {
   "POST /api/set-bounty": setBountyPost,
   "POST /api/set-immunity": setImmunityPost,
   "POST /api/admin-proofs": adminProofsPost,
-  "POST /api/toggle-break": toggleBreakPost,
   "POST /api/set-birthdays": setBirthdaysPost,
   "POST /api/update-photo": updatePhotoPost,
 };

@@ -30,6 +30,8 @@ export async function onRequestPost({ request, env }) {
           eliminatedBy: null,
           eliminatedAt: null,
           immune: false,
+          kills: 0,
+          following: null,
         })
       )
     )
