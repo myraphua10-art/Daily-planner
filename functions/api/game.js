@@ -37,6 +37,6 @@ export async function onRequestPost({ request, env }) {
   const riggedHunter = String(body.riggedHunter || "").trim();
   const riggedTarget = String(body.riggedTarget || "").trim();
 
-  await putGame(env, { players, riggedHunter, riggedTarget, locked: false });
+  await putGame(env, { ...existing, players, riggedHunter, riggedTarget, locked: false });
   return json({ ok: true });
 }
