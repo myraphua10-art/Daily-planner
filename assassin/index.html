@@ -67,7 +67,8 @@
   .reveal .dossier-photo.hidden{display:none;}
   .reveal .target{font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700; font-size:30px; margin-top:8px;}
   .reveal.eliminated{background:var(--card); color:var(--ink); border:1px solid var(--line);}
-  .reveal.eliminated .target{color:var(--sub); font-style:normal; font-size:20px;}
+  .reveal.eliminated .target{color:var(--ink); font-weight:700; font-style:normal; font-size:20px;}
+  .reveal .target-sub{font-style:italic; font-size:14px; color:var(--sub); margin-top:6px;}
   .reveal.won{background:var(--card); color:var(--ink); border:2px solid var(--accent);}
   .hint{font-size:12.5px; color:var(--sub); margin-top:16px; text-align:center; line-height:1.6; font-style:italic;}
   .tagline{font-size:14px; color:#544f3f; margin:18px 0 0; text-align:center; font-weight:700;}
@@ -118,6 +119,7 @@
       <div class="lbl" id="revealLabel">Your Target</div>
       <img id="dossierPhoto" class="dossier-photo hidden" alt="">
       <div class="target" id="revealText">-</div>
+      <div class="target-sub hidden" id="revealSub"></div>
     </div>
 
     <div id="followArea" class="follow-note hidden"></div>
@@ -178,6 +180,7 @@
     const revealArea = document.getElementById("revealArea");
     const revealLabel = document.getElementById("revealLabel");
     const revealText = document.getElementById("revealText");
+    const revealSub = document.getElementById("revealSub");
     const dossierPhoto = document.getElementById("dossierPhoto");
     const followArea = document.getElementById("followArea");
     const paparazziBtn = document.getElementById("paparazziBtn");
@@ -219,16 +222,19 @@
       changePhotoBtn.classList.remove("hidden");
       followArea.classList.add("hidden");
       paparazziBtn.classList.add("hidden");
+      revealSub.classList.add("hidden");
 
       if (result.eliminated) {
         revealArea.classList.add("eliminated");
         revealLabel.textContent = "You've Been Eliminated";
         dossierPhoto.classList.add("hidden");
-        revealText.textContent = result.eliminatedBy ? `by ${result.eliminatedBy}` : "Better luck next time!";
+        revealText.textContent = result.eliminatedBy ? `by ${result.eliminatedBy}` : "";
+        revealSub.textContent = "Better luck next time...";
+        revealSub.classList.remove("hidden");
         killBtn.classList.add("hidden");
         hintText.textContent = "Thanks for playing! Stick around to see who wins.";
         if (result.following) {
-          followArea.innerHTML = `Follow <b>${result.following.name}</b> around and document their game - they've got ${result.following.kills} kill${result.following.kills === 1 ? "" : "s"} so far.`;
+          followArea.innerHTML = `Follow them around and document their game - they are currently at ${result.following.kills} kills.`;
           followArea.classList.remove("hidden");
           paparazziBtn.classList.remove("hidden");
         }
