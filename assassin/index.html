@@ -280,9 +280,11 @@
       }
     }
 
-    async function fetchTarget(name, token) {
+    async function fetchTarget(name, token, birthday) {
       const headers = token ? { "x-claim-token": token } : {};
-      const res = await fetch(`/api/target?name=${encodeURIComponent(name)}`, { headers });
+      const qs = new URLSearchParams({ name });
+      if (birthday) qs.set("birthday", birthday);
+      const res = await fetch(`/api/target?${qs}`, { headers });
       const data = await res.json();
       if (!res.ok) return { error: data.error || "error" };
       return data;
@@ -363,13 +365,21 @@
         }
         claimBtn.disabled = true;
         try {
-          const result = await fetchTarget(name, "");
+          const result = await fetchTarget(name, "", birthday);
           if (result.error === "not-claimed") {
             currentName = name;
             pendingBirthday = birthday;
             introText.classList.add("hidden");
             pickArea.classList.add("hidden");
             photoArea.classList.remove("hidden");
+            return;
+          }
+          if (result.error === "wrong-birthday") {
+            showMessage("That birthday doesn't match our records.", "error");
+            return;
+          }
+          if (result.error === "no-birthday-set") {
+            showMessage("Ask Myra to add your birthday before you claim your name.", "error");
             return;
           }
           if (result.error === "already-claimed") {
