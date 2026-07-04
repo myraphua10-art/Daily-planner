@@ -122,6 +122,9 @@
 
     <div id="followArea" class="follow-note hidden"></div>
 
+    <button id="paparazziBtn" class="text-btn hidden">Upload documentation photo</button>
+    <input type="file" id="paparazziInput" accept="image/*" class="hidden">
+
     <button id="killBtn" class="kill-btn hidden">I Got Them</button>
 
     <button id="changePhotoBtn" class="text-btn hidden">Change my photo</button>
@@ -177,6 +180,8 @@
     const revealText = document.getElementById("revealText");
     const dossierPhoto = document.getElementById("dossierPhoto");
     const followArea = document.getElementById("followArea");
+    const paparazziBtn = document.getElementById("paparazziBtn");
+    const paparazziInput = document.getElementById("paparazziInput");
     const killBtn = document.getElementById("killBtn");
     const changePhotoBtn = document.getElementById("changePhotoBtn");
     const changePhotoInput = document.getElementById("changePhotoInput");
@@ -213,6 +218,7 @@
       revealArea.classList.remove("eliminated", "won");
       changePhotoBtn.classList.remove("hidden");
       followArea.classList.add("hidden");
+      paparazziBtn.classList.add("hidden");
 
       if (result.eliminated) {
         revealArea.classList.add("eliminated");
@@ -224,6 +230,7 @@
         if (result.following) {
           followArea.innerHTML = `Follow <b>${result.following.name}</b> around and document their game - they've got ${result.following.kills} kill${result.following.kills === 1 ? "" : "s"} so far.`;
           followArea.classList.remove("hidden");
+          paparazziBtn.classList.remove("hidden");
         }
         return;
       }
@@ -438,6 +445,34 @@
         } finally {
           changePhotoBtn.disabled = false;
           changePhotoInput.value = "";
+        }
+      });
+
+      paparazziBtn.addEventListener("click", () => paparazziInput.click());
+
+      paparazziInput.addEventListener("change", async () => {
+        const file = paparazziInput.files[0];
+        if (!file) return;
+        paparazziBtn.disabled = true;
+        try {
+          const resized = await resizeImage(file);
+          const res = await fetch("/api/upload-paparazzi", {
+            method: "POST",
+            headers: { "x-claim-token": currentToken, "content-type": "application/json" },
+            body: JSON.stringify({ name: currentName, photoDataUrl: resized }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            showMessage(data.error || "Something went wrong.", "error");
+            return;
+          }
+          showMessage("Uploaded! Keep the documentation coming.", "info");
+        } catch (e) {
+          console.error(e);
+          showMessage("Something went wrong. Try again in a moment.", "error");
+        } finally {
+          paparazziBtn.disabled = false;
+          paparazziInput.value = "";
         }
       });
 

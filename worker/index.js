@@ -13,6 +13,8 @@ import { onRequestPost as setImmunityPost } from "../functions/api/set-immunity.
 import { onRequestPost as adminProofsPost } from "../functions/api/admin-proofs.js";
 import { onRequestPost as setBirthdaysPost } from "../functions/api/set-birthdays.js";
 import { onRequestPost as updatePhotoPost } from "../functions/api/update-photo.js";
+import { onRequestPost as uploadPaparazziPost } from "../functions/api/upload-paparazzi.js";
+import { onRequestPost as adminPaparazziPost } from "../functions/api/admin-paparazzi.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -31,6 +33,8 @@ const routes = {
   "POST /api/admin-proofs": adminProofsPost,
   "POST /api/set-birthdays": setBirthdaysPost,
   "POST /api/update-photo": updatePhotoPost,
+  "POST /api/upload-paparazzi": uploadPaparazziPost,
+  "POST /api/admin-paparazzi": adminPaparazziPost,
 };
 
 export default {

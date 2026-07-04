@@ -53,6 +53,13 @@ export function proofKey(name) {
   return `proof:${slugify(name)}`;
 }
 
+// Paparazzi documentation photos, one per submission (an eliminated player
+// can submit many over time) - listed later via KV's prefix listing rather
+// than a hand-maintained index, so concurrent uploads can't race each other.
+export function paparazziKey(id) {
+  return `paparazzi:${id}`;
+}
+
 // Shared shape for a hunter's reveal, whether they just claimed their name
 // or are revisiting. Looks up the current target's photo (if that person has
 // uploaded one yet) fresh each time, so it stays current as the chain shifts.

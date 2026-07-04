@@ -119,6 +119,16 @@
     </div>
     <button id="downloadProofsBtn" class="hidden" style="margin-top:8px;">Download selected</button>
 
+    <h2>Paparazzi documentation</h2>
+    <p class="sub">Once someone's eliminated, they're assigned to follow and document whoever got them. Every photo they submit shows up here - tick your favourites and download them.</p>
+    <button id="loadPaparazziBtn">Load documentation photos</button>
+    <div id="paparazziGrid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px;"></div>
+    <div id="paparazziSelectRow" class="hidden" style="display:flex; gap:8px; margin-top:10px;">
+      <button id="paparazziSelectAllBtn" type="button" style="flex:1;">Select all</button>
+      <button id="paparazziSelectNoneBtn" type="button" style="flex:1;">Select none</button>
+    </div>
+    <button id="downloadPaparazziBtn" class="hidden" style="margin-top:8px;">Download selected</button>
+
     <h2>Bounty target</h2>
     <p class="sub">Pick one active player as a public "high-value target" for a limited time - shown on the status board and guest pages. Any real prize/bragging rights are up to you in person. Leave the name blank and click Set to clear it.</p>
     <div class="row">
@@ -355,6 +365,7 @@
 
     let loadedPhotos = [];
     let loadedProofs = [];
+    let loadedPaparazzi = [];
 
     function downloadDataUrl(dataUrl, filename) {
       const a = document.createElement("a");
@@ -505,6 +516,51 @@
     document.getElementById("proofSelectNoneBtn").addEventListener("click", () => setAllChecked("proofGrid", false));
     document.getElementById("downloadProofsBtn").addEventListener("click", (e) => {
       downloadChecked("proofGrid", loadedProofs, e.currentTarget);
+    });
+
+    document.getElementById("loadPaparazziBtn").addEventListener("click", async () => {
+      const grid = document.getElementById("paparazziGrid");
+      const selectRow = document.getElementById("paparazziSelectRow");
+      const downloadBtn = document.getElementById("downloadPaparazziBtn");
+      grid.innerHTML = "";
+      selectRow.classList.add("hidden");
+      downloadBtn.classList.add("hidden");
+      try {
+        const res = await fetch("/api/admin-paparazzi", {
+          method: "POST",
+          headers: adminHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load documentation photos.");
+        if (!data.entries.length) {
+          grid.innerHTML = `<div class="msg info">No documentation photos yet.</div>`;
+          return;
+        }
+        loadedPaparazzi = data.entries.map((entry, i) => ({
+          name: `${entry.uploader}-documenting-${entry.subject}-${i}`,
+          dataUrl: entry.photoDataUrl,
+        }));
+        grid.innerHTML = data.entries
+          .map((entry, i) => `
+            <div style="position:relative; text-align:center;">
+              <input type="checkbox" class="photo-check" data-index="${i}" style="position:absolute; top:6px; left:6px; width:18px; height:18px; z-index:2;">
+              <img src="${entry.photoDataUrl}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px; border:1px solid var(--line);">
+              <div style="font-size:12px; margin-top:4px;">${entry.uploader} documenting ${entry.subject}</div>
+              <div style="font-size:10.5px; color:var(--sub);">${new Date(entry.submittedAt).toLocaleString()}</div>
+            </div>
+          `)
+          .join("");
+        selectRow.classList.remove("hidden");
+        downloadBtn.classList.remove("hidden");
+      } catch (e) {
+        grid.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
+
+    document.getElementById("paparazziSelectAllBtn").addEventListener("click", () => setAllChecked("paparazziGrid", true));
+    document.getElementById("paparazziSelectNoneBtn").addEventListener("click", () => setAllChecked("paparazziGrid", false));
+    document.getElementById("downloadPaparazziBtn").addEventListener("click", (e) => {
+      downloadChecked("paparazziGrid", loadedPaparazzi, e.currentTarget);
     });
 
     document.getElementById("bountyBtn").addEventListener("click", async () => {
