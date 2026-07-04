@@ -414,6 +414,7 @@
 
       killBtn.addEventListener("click", () => {
         killBtn.classList.add("hidden");
+        breakToggleBtn.classList.add("hidden");
         proofArea.classList.remove("hidden");
       });
 
@@ -446,6 +447,7 @@
         submitProofBtn.disabled = true;
         proofArea.classList.add("hidden");
         killBtn.classList.remove("hidden");
+        breakToggleBtn.classList.remove("hidden");
       });
 
       proofInput.addEventListener("change", async () => {
