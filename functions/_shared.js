@@ -28,6 +28,17 @@ export async function putGame(env, game) {
   await env.ASSASSIN_KV.put("game", JSON.stringify(game));
 }
 
+// Accepts DD/MM (or DD-MM, DD.MM, single-digit day/month) and normalizes to
+// a zero-padded "DD/MM" string, or null if it isn't a valid date shape.
+export function normalizeBirthday(raw) {
+  const m = String(raw || "").trim().match(/^(\d{1,2})\s*[/\-.]\s*(\d{1,2})$/);
+  if (!m) return null;
+  const day = Number(m[1]);
+  const month = Number(m[2]);
+  if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+  return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}`;
+}
+
 export function assignKey(name) {
   return `assign:${slugify(name)}`;
 }

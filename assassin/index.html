@@ -103,6 +103,7 @@
 
     <div id="pickArea">
       <select id="nameSelect"></select>
+      <input type="text" id="birthdayInput" placeholder="Your birthday (DD/MM)" inputmode="numeric" maxlength="5">
       <button id="claimBtn">This Is Me &mdash; Show My Target</button>
     </div>
 
@@ -164,6 +165,7 @@
     const msgArea = document.getElementById("msgArea");
     const pickArea = document.getElementById("pickArea");
     const nameSelect = document.getElementById("nameSelect");
+    const birthdayInput = document.getElementById("birthdayInput");
     const claimBtn = document.getElementById("claimBtn");
     const photoArea = document.getElementById("photoArea");
     const photoInput = document.getElementById("photoInput");
@@ -187,6 +189,7 @@
     let currentToken = null;
     let pendingPhotoDataUrl = null;
     let pendingProofDataUrl = null;
+    let pendingBirthday = null;
 
     function showMessage(text, type = "info") {
       msgArea.innerHTML = `<div class="msg ${type}">${text}</div>`;
@@ -346,11 +349,17 @@
       // already-claimed session, i.e. almost everyone after their first visit.
       claimBtn.addEventListener("click", async () => {
         const name = nameSelect.value;
+        const birthday = birthdayInput.value.trim();
+        if (!/^\d{1,2}\s*[/\-.]\s*\d{1,2}$/.test(birthday)) {
+          showMessage("Enter your birthday as DD/MM.", "error");
+          return;
+        }
         claimBtn.disabled = true;
         try {
           const result = await fetchTarget(name, "");
           if (result.error === "not-claimed") {
             currentName = name;
+            pendingBirthday = birthday;
             introText.classList.add("hidden");
             pickArea.classList.add("hidden");
             photoArea.classList.remove("hidden");
@@ -393,7 +402,7 @@
           const res = await fetch("/api/claim", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ name: currentName, photoDataUrl: pendingPhotoDataUrl }),
+            body: JSON.stringify({ name: currentName, photoDataUrl: pendingPhotoDataUrl, birthday: pendingBirthday }),
           });
           const data = await res.json();
           if (!res.ok) {
