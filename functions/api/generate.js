@@ -37,6 +37,6 @@ export async function onRequestPost({ request, env }) {
     )
   );
 
-  await putGame(env, { ...game, locked: true });
+  await putGame(env, { ...game, locked: true, lockedAt: Date.now() });
   return json({ ok: true, count: Object.keys(assignments).length });
 }

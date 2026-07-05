@@ -23,5 +23,5 @@ export async function onRequestGet({ env }) {
     })
   );
 
-  return json({ locked: true, players, bountyTarget: game.bountyTarget || null });
+  return json({ locked: true, players, bountyTarget: game.bountyTarget || null, lockedAt: game.lockedAt || null });
 }
