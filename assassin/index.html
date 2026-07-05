@@ -78,6 +78,23 @@
     text-align:center; font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
     color:var(--gold); background:#f6efe0; border:1px solid #e3cfa1; border-radius:3px; padding:8px 10px; margin-bottom:16px;
   }
+  .section-label{
+    font-size:11.5px; text-transform:uppercase; letter-spacing:.16em; color:var(--sub);
+    margin:0 0 8px; text-align:center;
+  }
+  .leaderboard-row{
+    display:flex; justify-content:space-between; padding:6px 4px; border-bottom:1px solid var(--line); font-size:14px;
+  }
+  .leaderboard-row:last-child{border-bottom:none;}
+  .leaderboard-row .rank{color:var(--sub); margin-right:4px;}
+  #leaderboardArea{margin-bottom:16px;}
+  .leader-toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--accent); color:var(--card); padding:12px 18px; border-radius:6px;
+    font-size:13.5px; box-shadow:0 6px 20px rgba(0,0,0,0.25); opacity:0;
+    transition:opacity .3s, transform .3s; max-width:88vw; text-align:center; z-index:50; pointer-events:none;
+  }
+  .leader-toast.shown{opacity:1; transform:translateX(-50%) translateY(0);}
   button.text-btn{
     background:transparent; border:none; color:var(--sub); margin-top:10px;
     font-weight:600; font-size:13px; letter-spacing:normal; text-transform:none; box-shadow:none;
@@ -100,7 +117,14 @@
 
     <div id="bountyBanner" class="bounty-banner hidden"></div>
 
+    <div id="leaderboardArea" class="hidden">
+      <p class="section-label">Kill Leaderboard</p>
+      <div id="leaderboardList"></div>
+    </div>
+
     <div id="msgArea"></div>
+
+    <div id="leaderToast" class="leader-toast hidden"></div>
 
     <div id="pickArea">
       <select id="nameSelect"></select>
@@ -194,6 +218,9 @@
     const submitProofBtn = document.getElementById("submitProofBtn");
     const cancelProofBtn = document.getElementById("cancelProofBtn");
     const hintText = document.getElementById("hintText");
+    const leaderboardArea = document.getElementById("leaderboardArea");
+    const leaderboardList = document.getElementById("leaderboardList");
+    const leaderToast = document.getElementById("leaderToast");
 
     // Numeric mobile keypads have no "/" key, so auto-insert it after the
     // day digits rather than asking guests to type one.
@@ -262,6 +289,67 @@
       killBtn.classList.remove("hidden");
       hintText.textContent = "Keep this to yourself. If you switch phones and lose access, ask me to reset your name.";
     }
+
+    // Kills are public info - they don't reveal who's hunting whom, just a
+    // running tally, so this is safe to show to everyone regardless of
+    // claim/elimination status.
+    async function fetchLeaderboard() {
+      try {
+        const res = await fetch("/api/status");
+        const data = await res.json();
+        if (!data.locked || !data.players?.length) return null;
+        return data.players.slice().sort((a, b) => (b.kills || 0) - (a.kills || 0));
+      } catch (e) {
+        console.error(e);
+        return null;
+      }
+    }
+
+    async function renderLeaderboard() {
+      const sorted = await fetchLeaderboard();
+      if (!sorted) {
+        leaderboardArea.classList.add("hidden");
+        return;
+      }
+      leaderboardList.innerHTML = sorted
+        .map(
+          (p, i) => `
+            <div class="leaderboard-row">
+              <span><span class="rank">${i + 1}.</span>${p.name}</span>
+              <span>${p.kills || 0} kill${p.kills === 1 ? "" : "s"}</span>
+            </div>
+          `
+        )
+        .join("");
+      leaderboardArea.classList.remove("hidden");
+    }
+
+    function showLeaderToast(text) {
+      leaderToast.textContent = text;
+      leaderToast.classList.remove("hidden");
+      requestAnimationFrame(() => leaderToast.classList.add("shown"));
+      setTimeout(() => {
+        leaderToast.classList.remove("shown");
+        setTimeout(() => leaderToast.classList.add("hidden"), 300);
+      }, 6000);
+    }
+
+    async function announceLeader() {
+      const sorted = await fetchLeaderboard();
+      if (!sorted || !sorted.length) return;
+      const topKills = sorted[0].kills || 0;
+      if (topKills <= 0) return;
+      const leaders = sorted.filter((p) => (p.kills || 0) === topKills).map((p) => p.name);
+      const text =
+        leaders.length === 1
+          ? `${leaders[0]} is currently ranked 1st in kill count.`
+          : `${leaders.join(" and ")} are tied for 1st in kill count.`;
+      showLeaderToast(text);
+    }
+
+    renderLeaderboard();
+    setInterval(renderLeaderboard, 15000);
+    setInterval(announceLeader, 5 * 60 * 1000);
 
     async function fetchTarget(name, token, birthday) {
       const headers = token ? { "x-claim-token": token } : {};
