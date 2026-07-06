@@ -155,6 +155,11 @@
       <button id="revokeImmunityBtn" class="danger">Revoke immunity</button>
     </div>
     <div id="immunityResult"></div>
+
+    <h2>Full mapping (emergency verification only)</h2>
+    <p class="sub">Shows who's hunting whom, for every player - the exact thing this whole app is built to keep hidden, including from you. Only use this to verify a manual change (like removing a player) didn't break anything. Looking at this otherwise defeats the point of the game.</p>
+    <button id="revealMappingBtn" class="danger">Reveal full mapping</button>
+    <div id="mappingResult" style="margin-top:10px;"></div>
   </div>
 
   <script type="module">
@@ -655,6 +660,45 @@
 
     document.getElementById("grantImmunityBtn").addEventListener("click", () => setImmunity(true));
     document.getElementById("revokeImmunityBtn").addEventListener("click", () => setImmunity(false));
+
+    document.getElementById("revealMappingBtn").addEventListener("click", async () => {
+      const resultEl = document.getElementById("mappingResult");
+      if (
+        !confirm(
+          "This shows who's hunting whom for every player. Only continue if you're verifying a manual change - looking at this otherwise ruins the game for you. Continue?"
+        )
+      ) {
+        return;
+      }
+      try {
+        const res = await fetch("/api/admin-full-mapping", {
+          method: "POST",
+          headers: adminHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load mapping.");
+        resultEl.innerHTML = `
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <tr style="text-align:left; color:var(--sub); font-size:11px; text-transform:uppercase; letter-spacing:.05em;">
+              <th style="padding:4px;">Hunter</th><th style="padding:4px;">Target</th><th style="padding:4px;">Status</th>
+            </tr>
+            ${data.rows
+              .map(
+                (r) => `
+              <tr style="border-top:1px solid var(--line);">
+                <td style="padding:6px 4px;">${r.name}</td>
+                <td style="padding:6px 4px;">${r.targetName || "-"}</td>
+                <td style="padding:6px 4px;">${r.status}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </table>
+        `;
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
   </script>
 </body>
 </html>
