@@ -99,6 +99,14 @@
     </div>
     <button id="undoBtn" class="danger">Undo this elimination</button>
 
+    <h2>Remove a player</h2>
+    <p class="sub">If someone can't make it, type their exact name to cleanly take them out of the game. Whoever was hunting them silently inherits their target - everyone else's pairing is completely unaffected, whether they've claimed their name yet or not.</p>
+    <div class="row">
+      <div><input type="text" id="removeNameInput" placeholder="Exact name"></div>
+    </div>
+    <button id="removeBtn" class="danger">Remove this player</button>
+    <div id="removeResult"></div>
+
     <h2>Uploaded photos</h2>
     <p class="sub">See who has uploaded a photo of themselves so far. Tick the ones you want to keep, then download them. This doesn't show any pairings.</p>
     <button id="loadPhotosBtn">Load photos</button>
@@ -360,6 +368,27 @@
         document.getElementById("undoNameInput").value = "";
       } catch (e) {
         showStatus(e.message, "error");
+      }
+    });
+
+    document.getElementById("removeBtn").addEventListener("click", async () => {
+      const name = document.getElementById("removeNameInput").value.trim();
+      const resultEl = document.getElementById("removeResult");
+      if (!name) return;
+      if (!confirm(`Remove "${name}" from the game? This can't be undone.`)) return;
+      try {
+        const res = await fetch("/api/remove-player", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to remove player.");
+        resultEl.innerHTML = `<div class="msg success">"${data.removed}" removed from the game.</div>`;
+        document.getElementById("removeNameInput").value = "";
+        await init();
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
     });
 
