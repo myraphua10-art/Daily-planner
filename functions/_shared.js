@@ -60,6 +60,12 @@ export function paparazziKey(id) {
   return `paparazzi:${id}`;
 }
 
+// Snapshot of everything /api/remove-player changed, so /api/undo-remove-player
+// can revert it - as long as nothing else has moved on in the meantime.
+export function removalBackupKey(name) {
+  return `removal-backup:${slugify(name)}`;
+}
+
 // Shared shape for a hunter's reveal, whether they just claimed their name
 // or are revisiting. Looks up the current target's photo (if that person has
 // uploaded one yet) fresh each time, so it stays current as the chain shifts.

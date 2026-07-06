@@ -107,6 +107,13 @@
     <button id="removeBtn" class="danger">Remove this player</button>
     <div id="removeResult"></div>
 
+    <p class="sub" style="margin-top:14px;">Changed your mind? Type the same name to put them back exactly as they were - only works if nobody's game has moved on since the removal.</p>
+    <div class="row">
+      <div><input type="text" id="undoRemoveNameInput" placeholder="Exact name"></div>
+    </div>
+    <button id="undoRemoveBtn">Undo that removal</button>
+    <div id="undoRemoveResult"></div>
+
     <h2>Uploaded photos</h2>
     <p class="sub">See who has uploaded a photo of themselves so far. Tick the ones you want to keep, then download them. This doesn't show any pairings.</p>
     <button id="loadPhotosBtn">Load photos</button>
@@ -380,7 +387,7 @@
       const name = document.getElementById("removeNameInput").value.trim();
       const resultEl = document.getElementById("removeResult");
       if (!name) return;
-      if (!confirm(`Remove "${name}" from the game? This can't be undone.`)) return;
+      if (!confirm(`Remove "${name}" from the game? You can undo this right after, but only until anyone's game moves on.`)) return;
       try {
         const res = await fetch("/api/remove-player", {
           method: "POST",
@@ -391,6 +398,26 @@
         if (!res.ok) throw new Error(data.error || "Failed to remove player.");
         resultEl.innerHTML = `<div class="msg success">"${data.removed}" removed from the game.</div>`;
         document.getElementById("removeNameInput").value = "";
+        await init();
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
+
+    document.getElementById("undoRemoveBtn").addEventListener("click", async () => {
+      const name = document.getElementById("undoRemoveNameInput").value.trim();
+      const resultEl = document.getElementById("undoRemoveResult");
+      if (!name) return;
+      try {
+        const res = await fetch("/api/undo-remove-player", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to undo.");
+        resultEl.innerHTML = `<div class="msg success">"${data.restored}" is back in the game exactly as before.</div>`;
+        document.getElementById("undoRemoveNameInput").value = "";
         await init();
       } catch (e) {
         resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;

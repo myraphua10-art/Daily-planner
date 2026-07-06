@@ -1,4 +1,4 @@
-import { json, getGame, putGame, requireAdmin, assignKey, photoKey, proofKey } from "../_shared.js";
+import { json, getGame, putGame, requireAdmin, assignKey, removalBackupKey } from "../_shared.js";
 
 // Admin only. Cleanly removes one player from an already-locked game by
 // splicing them out of the hunting cycle: whoever was hunting them inherits
@@ -7,6 +7,11 @@ import { json, getGame, putGame, requireAdmin, assignKey, photoKey, proofKey } f
 // completely untouched - whether that guest has already claimed their name
 // or not, their own target never changes. The only unavoidable change is
 // the removed player's own hunter, who silently gets a new target.
+//
+// Saves a snapshot so /api/undo-remove-player can revert this, provided
+// nothing else has happened to the affected hunter/followers since. Photo
+// and proof-photo KV entries are deliberately left in place rather than
+// deleted, so an undo brings them straight back with no extra bookkeeping.
 export async function onRequestPost({ request, env }) {
   if (!requireAdmin(request, env)) return json({ error: "Unauthorized" }, 401);
 
@@ -24,9 +29,9 @@ export async function onRequestPost({ request, env }) {
   const removedKey = assignKey(match);
   const removedRaw = await env.ASSASSIN_KV.get(removedKey);
   if (!removedRaw) return json({ error: "Unknown player." }, 404);
-  const removed = JSON.parse(removedRaw);
+  const removedRecord = JSON.parse(removedRaw);
 
-  if (removed.status === "won") {
+  if (removedRecord.status === "won") {
     return json({ error: "That player already won - nothing to remove." }, 400);
   }
 
@@ -35,17 +40,19 @@ export async function onRequestPost({ request, env }) {
   // Whoever should now be documented in the removed player's place: their
   // own hunter if they were still active (that person is "continuing the
   // story"), or whoever eliminated them if they'd already been caught.
-  let redirectFollowersTo = removed.status === "eliminated" ? removed.eliminatedBy : null;
+  let redirectFollowersTo = removedRecord.status === "eliminated" ? removedRecord.eliminatedBy : null;
+  let affectedHunter = null;
 
-  if (removed.status === "active") {
+  if (removedRecord.status === "active") {
     for (const p of others) {
       const raw = await env.ASSASSIN_KV.get(assignKey(p));
       if (!raw) continue;
       const rec = JSON.parse(raw);
       if (rec.status === "active" && rec.targetName?.toLowerCase() === match.toLowerCase()) {
-        rec.targetName = removed.targetName;
+        rec.targetName = removedRecord.targetName;
         await env.ASSASSIN_KV.put(assignKey(p), JSON.stringify(rec));
         redirectFollowersTo = p;
+        affectedHunter = p;
         break;
       }
     }
@@ -55,6 +62,7 @@ export async function onRequestPost({ request, env }) {
   // eliminated them earlier, whether or not the removed player was ever
   // caught themselves) gets pointed at redirectFollowersTo instead, so the
   // chain isn't left dangling on someone who no longer exists.
+  const affectedFollowers = [];
   if (redirectFollowersTo) {
     for (const p of others) {
       const raw = await env.ASSASSIN_KV.get(assignKey(p));
@@ -63,17 +71,29 @@ export async function onRequestPost({ request, env }) {
       if (rec.status === "eliminated" && rec.following?.toLowerCase() === match.toLowerCase()) {
         rec.following = redirectFollowersTo;
         await env.ASSASSIN_KV.put(assignKey(p), JSON.stringify(rec));
+        affectedFollowers.push(p);
       }
     }
   }
 
   await env.ASSASSIN_KV.delete(removedKey);
-  await env.ASSASSIN_KV.delete(photoKey(match));
-  await env.ASSASSIN_KV.delete(proofKey(match));
 
   const birthdays = { ...(game.birthdays || {}) };
   delete birthdays[match];
   const bountyTarget = game.bountyTarget?.toLowerCase() === match.toLowerCase() ? null : game.bountyTarget;
+
+  const backup = {
+    removedName: match,
+    removedRecord,
+    affectedHunter,
+    redirectFollowersTo,
+    affectedFollowers,
+    playersBefore: game.players,
+    birthdaysBefore: game.birthdays || {},
+    bountyTargetBefore: game.bountyTarget || null,
+    removedAt: Date.now(),
+  };
+  await env.ASSASSIN_KV.put(removalBackupKey(match), JSON.stringify(backup));
 
   await putGame(env, { ...game, players: others, birthdays, bountyTarget });
 

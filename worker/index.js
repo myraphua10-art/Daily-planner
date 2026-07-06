@@ -18,6 +18,7 @@ import { onRequestPost as adminPaparazziPost } from "../functions/api/admin-papa
 import { onRequestGet as adminPaparazziFileGet } from "../functions/api/admin-paparazzi-file.js";
 import { onRequestPost as removePlayerPost } from "../functions/api/remove-player.js";
 import { onRequestPost as adminFullMappingPost } from "../functions/api/admin-full-mapping.js";
+import { onRequestPost as undoRemovePlayerPost } from "../functions/api/undo-remove-player.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -41,6 +42,7 @@ const routes = {
   "GET /api/admin-paparazzi-file": adminPaparazziFileGet,
   "POST /api/remove-player": removePlayerPost,
   "POST /api/admin-full-mapping": adminFullMappingPost,
+  "POST /api/undo-remove-player": undoRemovePlayerPost,
 };
 
 export default {
