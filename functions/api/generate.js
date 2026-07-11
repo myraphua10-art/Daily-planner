@@ -1,5 +1,5 @@
 import { json, getGame, putGame, requireAdmin, assignKey } from "../_shared.js";
-import { generateAssassinCycle } from "../../assassin/game-logic.js";
+import { generateAssassinCycle, generateKillCode } from "../../assassin/game-logic.js";
 
 // Admin only. Runs entirely on Cloudflare's servers - the resulting
 // assignments are written straight to KV and are never returned in this
@@ -32,6 +32,7 @@ export async function onRequestPost({ request, env }) {
           immune: false,
           kills: 0,
           following: null,
+          killCode: generateKillCode(),
         })
       )
     )

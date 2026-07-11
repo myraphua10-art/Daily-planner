@@ -5,18 +5,24 @@ import { json, getGame, assignKey, proofKey } from "../_shared.js";
 // the caller inherits whoever their target was hunting - the classic
 // Assassin chain. If that loops back to the caller themselves, they've won.
 // A proof photo of the catch is required (for the host to consider for
-// bonus gifts) - no photo, no elimination.
+// bonus gifts), and so is the kill code written on the back of the target's
+// laminated photo - ripping it off and reading the code back is what
+// actually proves the catch, not just the hunter's say-so.
 export async function onRequestPost({ request, env }) {
   const body = await request.json();
   const name = String(body.name || "").trim();
   const token = request.headers.get("x-claim-token") || "";
   const proofPhotoDataUrl = body.proofPhotoDataUrl ? String(body.proofPhotoDataUrl) : null;
+  const killCode = String(body.killCode || "").trim().toUpperCase();
   if (!name || !token) return json({ error: "Missing name or claim token." }, 400);
   if (!proofPhotoDataUrl || !proofPhotoDataUrl.startsWith("data:image/")) {
     return json({ error: "A proof photo of the catch is required." }, 400);
   }
   if (proofPhotoDataUrl.length > 2_000_000) {
     return json({ error: "Proof photo is too large - try a smaller image." }, 400);
+  }
+  if (!killCode) {
+    return json({ error: "Enter the code from the back of their photo." }, 400);
   }
 
   const game = await getGame(env);
@@ -45,6 +51,9 @@ export async function onRequestPost({ request, env }) {
   }
   if (targetRecord.immune) {
     return json({ error: "Your target is currently immune - try again later." }, 400);
+  }
+  if (!targetRecord.killCode || killCode !== targetRecord.killCode) {
+    return json({ error: "That code doesn't match - check the back of the photo." }, 400);
   }
 
   const eliminatedName = hunter.targetName;

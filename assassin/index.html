@@ -160,6 +160,8 @@
       <p class="sub">ATTACH PROOF OF KILL<br>Funniest picture gets a prize....</p>
       <img id="proofPreview" class="photo-preview" alt="">
       <input type="file" id="proofInput" accept="image/*">
+      <label for="killCodeInput">Code from the back of their photo</label>
+      <input type="text" id="killCodeInput" placeholder="e.g. 7QXPM" autocapitalize="characters">
       <button id="submitProofBtn" disabled>Confirm Elimination</button>
       <button id="cancelProofBtn" class="secondary">Cancel</button>
     </div>
@@ -216,6 +218,7 @@
     const proofArea = document.getElementById("proofArea");
     const proofInput = document.getElementById("proofInput");
     const proofPreview = document.getElementById("proofPreview");
+    const killCodeInput = document.getElementById("killCodeInput");
     const submitProofBtn = document.getElementById("submitProofBtn");
     const cancelProofBtn = document.getElementById("cancelProofBtn");
     const hintText = document.getElementById("hintText");
@@ -601,9 +604,14 @@
         }
       });
 
+      function updateSubmitProofState() {
+        submitProofBtn.disabled = !pendingProofDataUrl || !killCodeInput.value.trim();
+      }
+
       cancelProofBtn.addEventListener("click", () => {
         pendingProofDataUrl = null;
         proofInput.value = "";
+        killCodeInput.value = "";
         proofPreview.classList.remove("shown");
         submitProofBtn.disabled = true;
         proofArea.classList.add("hidden");
@@ -617,15 +625,17 @@
           pendingProofDataUrl = await resizeImage(file);
           proofPreview.src = pendingProofDataUrl;
           proofPreview.classList.add("shown");
-          submitProofBtn.disabled = false;
+          updateSubmitProofState();
         } catch (e) {
           console.error(e);
           showMessage("Couldn't read that photo. Try a different one.", "error");
         }
       });
 
+      killCodeInput.addEventListener("input", updateSubmitProofState);
+
       submitProofBtn.addEventListener("click", async () => {
-        if (!pendingProofDataUrl) return;
+        if (!pendingProofDataUrl || !killCodeInput.value.trim()) return;
         submitProofBtn.disabled = true;
         try {
           const res = await fetch("/api/eliminate", {
@@ -634,6 +644,7 @@
             body: JSON.stringify({
               name: currentName,
               proofPhotoDataUrl: pendingProofDataUrl,
+              killCode: killCodeInput.value.trim(),
             }),
           });
           const data = await res.json();

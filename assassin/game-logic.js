@@ -1,5 +1,18 @@
 // Pure, framework-free game logic. No Firebase here so it can be unit-tested with plain Node.
 
+// Short, hand-writable code for the back of each laminated photo. Excludes
+// visually ambiguous characters (0/O, 1/I/L) since these get copied by eye
+// off a physical card, not pasted.
+const KILL_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+export function generateKillCode(length = 5) {
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    code += KILL_CODE_ALPHABET[Math.floor(Math.random() * KILL_CODE_ALPHABET.length)];
+  }
+  return code;
+}
+
 export function slugify(name) {
   return name
     .trim()

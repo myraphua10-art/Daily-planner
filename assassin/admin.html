@@ -163,6 +163,11 @@
     </div>
     <div id="immunityResult"></div>
 
+    <h2>Kill codes</h2>
+    <p class="sub">Each player has a code to write on the back of their laminated photo. When someone catches their target, they rip the photo off and enter this code to confirm the kill. Doesn't reveal any pairings - just each person's own code.</p>
+    <button id="loadKillCodesBtn">Load kill codes</button>
+    <div id="killCodesResult" style="margin-top:10px;"></div>
+
     <h2>Full mapping (emergency verification only)</h2>
     <p class="sub">Shows who's hunting whom, for every player - the exact thing this whole app is built to keep hidden, including from you. Only use this to verify a manual change (like removing a player) didn't break anything. Looking at this otherwise defeats the point of the game.</p>
     <button id="revealMappingBtn" class="danger">Reveal full mapping</button>
@@ -687,6 +692,41 @@
 
     document.getElementById("grantImmunityBtn").addEventListener("click", () => setImmunity(true));
     document.getElementById("revokeImmunityBtn").addEventListener("click", () => setImmunity(false));
+
+    document.getElementById("loadKillCodesBtn").addEventListener("click", async () => {
+      const resultEl = document.getElementById("killCodesResult");
+      resultEl.innerHTML = `<div class="msg info">Loading...</div>`;
+      try {
+        // Idempotent - only fills in codes for anyone who doesn't have one
+        // yet, never overwrites an existing code.
+        await fetch("/api/admin-backfill-kill-codes", { method: "POST", headers: adminHeaders() });
+
+        const res = await fetch("/api/admin-kill-codes", { method: "POST", headers: adminHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load kill codes.");
+        resultEl.innerHTML = `
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <tr style="text-align:left; color:var(--sub); font-size:11px; text-transform:uppercase; letter-spacing:.05em;">
+              <th style="padding:4px;">Name</th><th style="padding:4px;">Code</th>
+            </tr>
+            ${data.rows
+              .slice()
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(
+                (r) => `
+              <tr style="border-top:1px solid var(--line);">
+                <td style="padding:6px 4px;">${r.name}</td>
+                <td style="padding:6px 4px; font-family:monospace; letter-spacing:.1em;">${r.killCode || "-"}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </table>
+        `;
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
 
     document.getElementById("revealMappingBtn").addEventListener("click", async () => {
       const resultEl = document.getElementById("mappingResult");

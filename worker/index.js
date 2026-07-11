@@ -19,6 +19,8 @@ import { onRequestGet as adminPaparazziFileGet } from "../functions/api/admin-pa
 import { onRequestPost as removePlayerPost } from "../functions/api/remove-player.js";
 import { onRequestPost as adminFullMappingPost } from "../functions/api/admin-full-mapping.js";
 import { onRequestPost as undoRemovePlayerPost } from "../functions/api/undo-remove-player.js";
+import { onRequestPost as adminKillCodesPost } from "../functions/api/admin-kill-codes.js";
+import { onRequestPost as adminBackfillKillCodesPost } from "../functions/api/admin-backfill-kill-codes.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -43,6 +45,8 @@ const routes = {
   "POST /api/remove-player": removePlayerPost,
   "POST /api/admin-full-mapping": adminFullMappingPost,
   "POST /api/undo-remove-player": undoRemovePlayerPost,
+  "POST /api/admin-kill-codes": adminKillCodesPost,
+  "POST /api/admin-backfill-kill-codes": adminBackfillKillCodesPost,
 };
 
 export default {
