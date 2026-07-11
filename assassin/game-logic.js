@@ -1,34 +1,27 @@
 // Pure, framework-free game logic. No Firebase here so it can be unit-tested with plain Node.
 
-// Short, hand-writable code for the back of each laminated photo, built
-// from the player's own name (so it's memorable / easy to double-check)
-// but with random filler letters scattered in between to disguise it at a
-// glance. All caps, letters only. Excludes I/L/O for the filler letters
-// specifically, since those get confused for 1/0 when copied by eye off a
-// physical card - real name letters are kept as-is even if they're one of
-// those, since the point is to preserve the name.
-const FILLER_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ";
-const FILLER_COUNT = 4;
+// Short, hand-writable code for the back of each laminated photo, built by
+// taking the player's own name and swapping out a few of its letters for
+// random digits - same length as the name, close enough to still look like
+// it, cryptic enough not to read as an exact match at a glance. All caps.
+// Digits exclude 0/1 since those get confused for O/I when copied by eye
+// off a physical card.
+const DIGIT_ALPHABET = "23456789";
 
 export function generateKillCode(name) {
   const letters = String(name || "").toUpperCase().replace(/[^A-Z]/g, "").split("");
   if (!letters.length) letters.push("X");
 
-  // Scatter FILLER_COUNT random letters across the gaps around the name's
-  // own letters (including before the first and after the last).
-  const gapCounts = new Array(letters.length + 1).fill(0);
-  for (let i = 0; i < FILLER_COUNT; i++) {
-    gapCounts[Math.floor(Math.random() * gapCounts.length)]++;
+  const numToReplace = Math.min(letters.length, Math.max(1, Math.round(letters.length * 0.35)));
+  const positions = new Set();
+  while (positions.size < numToReplace) {
+    positions.add(Math.floor(Math.random() * letters.length));
   }
 
-  const randomFiller = () => FILLER_ALPHABET[Math.floor(Math.random() * FILLER_ALPHABET.length)];
-
-  const code = [];
-  for (let i = 0; i < letters.length; i++) {
-    for (let f = 0; f < gapCounts[i]; f++) code.push(randomFiller());
-    code.push(letters[i]);
+  const code = letters.slice();
+  for (const pos of positions) {
+    code[pos] = DIGIT_ALPHABET[Math.floor(Math.random() * DIGIT_ALPHABET.length)];
   }
-  for (let f = 0; f < gapCounts[letters.length]; f++) code.push(randomFiller());
 
   return code.join("");
 }
