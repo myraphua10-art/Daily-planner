@@ -1,16 +1,36 @@
 // Pure, framework-free game logic. No Firebase here so it can be unit-tested with plain Node.
 
-// Short, hand-writable code for the back of each laminated photo. Excludes
-// visually ambiguous characters (0/O, 1/I/L) since these get copied by eye
-// off a physical card, not pasted.
-const KILL_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+// Short, hand-writable code for the back of each laminated photo, built
+// from the player's own name (so it's memorable / easy to double-check)
+// but with random filler letters scattered in between to disguise it at a
+// glance. All caps, letters only. Excludes I/L/O for the filler letters
+// specifically, since those get confused for 1/0 when copied by eye off a
+// physical card - real name letters are kept as-is even if they're one of
+// those, since the point is to preserve the name.
+const FILLER_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ";
+const FILLER_COUNT = 4;
 
-export function generateKillCode(length = 5) {
-  let code = "";
-  for (let i = 0; i < length; i++) {
-    code += KILL_CODE_ALPHABET[Math.floor(Math.random() * KILL_CODE_ALPHABET.length)];
+export function generateKillCode(name) {
+  const letters = String(name || "").toUpperCase().replace(/[^A-Z]/g, "").split("");
+  if (!letters.length) letters.push("X");
+
+  // Scatter FILLER_COUNT random letters across the gaps around the name's
+  // own letters (including before the first and after the last).
+  const gapCounts = new Array(letters.length + 1).fill(0);
+  for (let i = 0; i < FILLER_COUNT; i++) {
+    gapCounts[Math.floor(Math.random() * gapCounts.length)]++;
   }
-  return code;
+
+  const randomFiller = () => FILLER_ALPHABET[Math.floor(Math.random() * FILLER_ALPHABET.length)];
+
+  const code = [];
+  for (let i = 0; i < letters.length; i++) {
+    for (let f = 0; f < gapCounts[i]; f++) code.push(randomFiller());
+    code.push(letters[i]);
+  }
+  for (let f = 0; f < gapCounts[letters.length]; f++) code.push(randomFiller());
+
+  return code.join("");
 }
 
 export function slugify(name) {

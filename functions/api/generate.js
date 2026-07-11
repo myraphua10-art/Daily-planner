@@ -32,7 +32,7 @@ export async function onRequestPost({ request, env }) {
           immune: false,
           kills: 0,
           following: null,
-          killCode: generateKillCode(),
+          killCode: generateKillCode(hunter),
         })
       )
     )
