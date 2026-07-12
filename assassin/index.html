@@ -116,6 +116,19 @@
     <p class="sub" id="introText">Pick your name to lock in and see who <b>you're</b> hunting. Nobody else - not even Myra - can see this screen, and it only ever shows your own target.</p>
 
     <div id="bountyBanner" class="bounty-banner hidden"></div>
+    <button id="bountySnatchBtn" class="text-btn hidden">Snatch the bounty</button>
+
+    <div id="bountySnatchArea" class="hidden">
+      <p class="sub">SNATCH THE BOUNTY<br>Rip their photo, enter the code, and get a reward.</p>
+      <img id="bountyProofPreview" class="photo-preview" alt="">
+      <input type="file" id="bountyProofInput" accept="image/*">
+      <label for="bountyKillCodeInput">Code from the back of their photo</label>
+      <input type="text" id="bountyKillCodeInput" placeholder="e.g. 3YRA" autocapitalize="characters" style="text-transform:uppercase;">
+      <button id="submitBountySnatchBtn" disabled>Confirm Bounty Kill</button>
+      <button id="cancelBountySnatchBtn" class="secondary">Cancel</button>
+    </div>
+
+    <div id="knownAssassinArea" class="follow-note hidden"></div>
 
     <div id="leaderboardArea" class="hidden">
       <p class="section-label">Leaderboard</p>
@@ -225,6 +238,15 @@
     const leaderboardArea = document.getElementById("leaderboardArea");
     const leaderboardList = document.getElementById("leaderboardList");
     const leaderToast = document.getElementById("leaderToast");
+    const bountyBanner = document.getElementById("bountyBanner");
+    const bountySnatchBtn = document.getElementById("bountySnatchBtn");
+    const bountySnatchArea = document.getElementById("bountySnatchArea");
+    const bountyProofInput = document.getElementById("bountyProofInput");
+    const bountyProofPreview = document.getElementById("bountyProofPreview");
+    const bountyKillCodeInput = document.getElementById("bountyKillCodeInput");
+    const submitBountySnatchBtn = document.getElementById("submitBountySnatchBtn");
+    const cancelBountySnatchBtn = document.getElementById("cancelBountySnatchBtn");
+    const knownAssassinArea = document.getElementById("knownAssassinArea");
 
     // Numeric mobile keypads have no "/" key, so auto-insert it after the
     // day digits rather than asking guests to type one.
@@ -235,12 +257,24 @@
 
     let currentName = null;
     let currentToken = null;
+    let currentTarget = null;
+    let currentStatus = null;
     let pendingPhotoDataUrl = null;
     let pendingProofDataUrl = null;
     let pendingBirthday = null;
+    let pendingBountyProofDataUrl = null;
 
     function showMessage(text, type = "info") {
       msgArea.innerHTML = `<div class="msg ${type}">${text}</div>`;
+    }
+
+    function renderKnownAssassin(name) {
+      if (name) {
+        knownAssassinArea.innerHTML = `You know your own assassin is <b>${name}</b>.`;
+        knownAssassinArea.classList.remove("hidden");
+      } else {
+        knownAssassinArea.classList.add("hidden");
+      }
     }
 
     function renderResult(result) {
@@ -254,8 +288,11 @@
       followArea.classList.add("hidden");
       paparazziBtn.classList.add("hidden");
       revealSub.classList.add("hidden");
+      renderKnownAssassin(result.knownAssassin);
 
       if (result.eliminated) {
+        currentStatus = "eliminated";
+        currentTarget = null;
         revealArea.classList.add("eliminated");
         revealLabel.textContent = "You've Been Eliminated";
         dossierPhoto.classList.add("hidden");
@@ -269,19 +306,25 @@
           followArea.classList.remove("hidden");
           paparazziBtn.classList.remove("hidden");
         }
+        renderBounty();
         return;
       }
 
       if (result.won) {
+        currentStatus = "won";
+        currentTarget = null;
         revealArea.classList.add("won");
         revealLabel.textContent = "✧ You Won ✧";
         dossierPhoto.classList.add("hidden");
         revealText.textContent = "You got everyone";
         killBtn.classList.add("hidden");
         hintText.textContent = "Congratulations, Assassin champion!";
+        renderBounty();
         return;
       }
 
+      currentStatus = "active";
+      currentTarget = result.targetName;
       revealLabel.textContent = "Your Target";
       if (result.targetPhoto) {
         dossierPhoto.src = result.targetPhoto;
@@ -292,6 +335,7 @@
       revealText.textContent = result.targetName;
       killBtn.classList.remove("hidden");
       hintText.textContent = "Keep this to yourself. If you switch phones and lose access, ask me to reset your name.";
+      renderBounty();
     }
 
     // Kills are public info - they don't reveal who's hunting whom, just a
@@ -305,6 +349,7 @@
         return {
           sorted: data.players.slice().sort((a, b) => (b.kills || 0) - (a.kills || 0)),
           lockedAt: data.lockedAt || null,
+          bountyTarget: data.bountyTarget || null,
         };
       } catch (e) {
         console.error(e);
@@ -312,10 +357,14 @@
       }
     }
 
+    let lastKnownBountyTarget = null;
+
     async function renderLeaderboard() {
       const result = await fetchLeaderboard();
       if (!result) {
         leaderboardArea.classList.add("hidden");
+        lastKnownBountyTarget = null;
+        renderBounty();
         return;
       }
       leaderboardList.innerHTML = result.sorted
@@ -329,6 +378,31 @@
         )
         .join("");
       leaderboardArea.classList.remove("hidden");
+      lastKnownBountyTarget = result.bountyTarget;
+      renderBounty();
+    }
+
+    // Bounty visibility is driven by whatever the most recent /api/status
+    // poll saw (every 15s), refreshed immediately after claiming/reveals via
+    // renderResult() too, so it doesn't wait a full poll cycle to appear.
+    function renderBounty() {
+      const bountyTarget = lastKnownBountyTarget;
+      if (bountyTarget) {
+        bountyBanner.textContent = `Bounty: ${bountyTarget}`;
+        bountyBanner.classList.remove("hidden");
+      } else {
+        bountyBanner.classList.add("hidden");
+        bountySnatchArea.classList.add("hidden");
+      }
+
+      const canSnatch =
+        bountyTarget &&
+        currentStatus === "active" &&
+        currentName &&
+        bountyTarget.toLowerCase() !== currentName.toLowerCase() &&
+        bountyTarget.toLowerCase() !== (currentTarget || "").toLowerCase();
+
+      bountySnatchBtn.classList.toggle("hidden", !canSnatch);
     }
 
     function showLeaderToast(text) {
@@ -403,12 +477,6 @@
     async function main() {
       const res = await fetch("/api/game");
       const game = await res.json();
-
-      if (game.bountyTarget) {
-        const bountyBanner = document.getElementById("bountyBanner");
-        bountyBanner.textContent = `Bounty: ${game.bountyTarget}`;
-        bountyBanner.classList.remove("hidden");
-      }
 
       if (!game.locked) {
         showMessage("Targets haven't been generated yet - check back closer to the party.", "info");
@@ -654,16 +722,82 @@
             return;
           }
           proofArea.classList.add("hidden");
-          if (data.won) {
-            renderResult({ won: true });
-          } else {
-            const refreshed = await fetchTarget(currentName, currentToken);
-            renderResult(refreshed);
-          }
+          const refreshed = await fetchTarget(currentName, currentToken);
+          renderResult(refreshed);
         } catch (e) {
           console.error(e);
           showMessage("Something went wrong. Try again in a moment.", "error");
           submitProofBtn.disabled = false;
+        }
+      });
+
+      bountySnatchBtn.addEventListener("click", () => {
+        bountySnatchBtn.classList.add("hidden");
+        bountySnatchArea.classList.remove("hidden");
+      });
+
+      function updateSubmitBountyState() {
+        submitBountySnatchBtn.disabled = !pendingBountyProofDataUrl || !bountyKillCodeInput.value.trim();
+      }
+
+      cancelBountySnatchBtn.addEventListener("click", () => {
+        pendingBountyProofDataUrl = null;
+        bountyProofInput.value = "";
+        bountyKillCodeInput.value = "";
+        bountyProofPreview.classList.remove("shown");
+        submitBountySnatchBtn.disabled = true;
+        bountySnatchArea.classList.add("hidden");
+        renderBounty();
+      });
+
+      bountyProofInput.addEventListener("change", async () => {
+        const file = bountyProofInput.files[0];
+        if (!file) return;
+        try {
+          pendingBountyProofDataUrl = await resizeImage(file);
+          bountyProofPreview.src = pendingBountyProofDataUrl;
+          bountyProofPreview.classList.add("shown");
+          updateSubmitBountyState();
+        } catch (e) {
+          console.error(e);
+          showMessage("Couldn't read that photo. Try a different one.", "error");
+        }
+      });
+
+      bountyKillCodeInput.addEventListener("input", updateSubmitBountyState);
+
+      submitBountySnatchBtn.addEventListener("click", async () => {
+        if (!pendingBountyProofDataUrl || !bountyKillCodeInput.value.trim()) return;
+        submitBountySnatchBtn.disabled = true;
+        try {
+          const res = await fetch("/api/snatch-bounty", {
+            method: "POST",
+            headers: { "x-claim-token": currentToken, "content-type": "application/json" },
+            body: JSON.stringify({
+              name: currentName,
+              proofPhotoDataUrl: pendingBountyProofDataUrl,
+              killCode: bountyKillCodeInput.value.trim(),
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            showMessage(data.error || "Something went wrong.", "error");
+            submitBountySnatchBtn.disabled = false;
+            return;
+          }
+          pendingBountyProofDataUrl = null;
+          bountyProofInput.value = "";
+          bountyKillCodeInput.value = "";
+          bountyProofPreview.classList.remove("shown");
+          bountySnatchArea.classList.add("hidden");
+          renderKnownAssassin(data.knownAssassin);
+          showMessage(`Bounty snatched! ${data.bountyEliminated} is out.`, "info");
+          await renderLeaderboard();
+        } catch (e) {
+          console.error(e);
+          showMessage("Something went wrong. Try again in a moment.", "error");
+        } finally {
+          submitBountySnatchBtn.disabled = false;
         }
       });
     }

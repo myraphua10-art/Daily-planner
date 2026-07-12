@@ -1,8 +1,9 @@
 import { json, getGame, putGame, assignKey, requireAdmin } from "../_shared.js";
 
 // Admin only. Sets (or clears) the public "bounty" target - shown on the
-// status board and guest pages. Purely cosmetic/flavor; any real prize is
-// handled by the host in person. Doesn't touch anyone's actual assignment.
+// status board and guest pages, and snatchable by anyone (not just their
+// assigned hunter) via /api/snatch-bounty for a limited window. Doesn't
+// touch anyone's actual assignment on its own.
 export async function onRequestPost({ request, env }) {
   if (!requireAdmin(request, env)) return json({ error: "Unauthorized" }, 401);
 
@@ -13,7 +14,7 @@ export async function onRequestPost({ request, env }) {
   const name = body.name ? String(body.name).trim() : null;
 
   if (!name) {
-    await putGame(env, { ...game, bountyTarget: null });
+    await putGame(env, { ...game, bountyTarget: null, bountySetAt: null });
     return json({ ok: true, bountyTarget: null });
   }
 
@@ -26,6 +27,6 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "Bounty target must currently be active." }, 400);
   }
 
-  await putGame(env, { ...game, bountyTarget: match });
+  await putGame(env, { ...game, bountyTarget: match, bountySetAt: Date.now() });
   return json({ ok: true, bountyTarget: match });
 }

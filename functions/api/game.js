@@ -1,4 +1,4 @@
-import { json, getGame, putGame, requireAdmin } from "../_shared.js";
+import { json, getGame, putGame, requireAdmin, effectiveBountyTarget } from "../_shared.js";
 
 // Public fields only: guest list, lock status, bounty. NEVER riggedHunter/
 // riggedTarget here - those reveal a pairing and must only go to an
@@ -8,7 +8,7 @@ export async function onRequestGet({ request, env }) {
   const base = {
     players: game?.players ?? [],
     locked: game?.locked ?? false,
-    bountyTarget: game?.bountyTarget ?? null,
+    bountyTarget: effectiveBountyTarget(game),
   };
 
   if (requireAdmin(request, env)) {

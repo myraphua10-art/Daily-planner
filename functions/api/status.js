@@ -1,4 +1,4 @@
-import { json, getGame, assignKey } from "../_shared.js";
+import { json, getGame, assignKey, effectiveBountyTarget } from "../_shared.js";
 
 // Public, no passcode needed - this is meant to be pulled up on a screen at
 // the party. Only ever returns each player's status (active/eliminated/won)
@@ -23,5 +23,5 @@ export async function onRequestGet({ env }) {
     })
   );
 
-  return json({ locked: true, players, bountyTarget: game.bountyTarget || null, lockedAt: game.lockedAt || null });
+  return json({ locked: true, players, bountyTarget: effectiveBountyTarget(game), lockedAt: game.lockedAt || null });
 }

@@ -20,6 +20,7 @@ import { onRequestPost as removePlayerPost } from "../functions/api/remove-playe
 import { onRequestPost as undoRemovePlayerPost } from "../functions/api/undo-remove-player.js";
 import { onRequestPost as adminKillCodesPost } from "../functions/api/admin-kill-codes.js";
 import { onRequestPost as adminBackfillKillCodesPost } from "../functions/api/admin-backfill-kill-codes.js";
+import { onRequestPost as snatchBountyPost } from "../functions/api/snatch-bounty.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -45,6 +46,7 @@ const routes = {
   "POST /api/undo-remove-player": undoRemovePlayerPost,
   "POST /api/admin-kill-codes": adminKillCodesPost,
   "POST /api/admin-backfill-kill-codes": adminBackfillKillCodesPost,
+  "POST /api/snatch-bounty": snatchBountyPost,
 };
 
 export default {

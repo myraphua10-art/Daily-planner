@@ -66,10 +66,29 @@ export function removalBackupKey(name) {
   return `removal-backup:${slugify(name)}`;
 }
 
+// A bounty is only snatchable for a limited window after it's set - after
+// that it quietly reverts to a normal target, same as if it were never
+// flagged. Time-based rather than a plain flag, same pattern as every other
+// "temporary status" in this app.
+export const BOUNTY_DURATION_MS = 20 * 60 * 1000;
+
+export function isBountyActive(game) {
+  return Boolean(game?.bountyTarget && game?.bountySetAt && Date.now() - game.bountySetAt < BOUNTY_DURATION_MS);
+}
+
+export function effectiveBountyTarget(game) {
+  return isBountyActive(game) ? game.bountyTarget : null;
+}
+
 // Shared shape for a hunter's reveal, whether they just claimed their name
 // or are revisiting. Looks up the current target's photo (if that person has
 // uploaded one yet) fresh each time, so it stays current as the chain shifts.
 export async function buildReveal(env, record, token) {
+  // Persistent, personal reward from a bounty snatch - the player's own
+  // hunter's identity. Not a pairing leak: it's information about *them*,
+  // shown regardless of their current active/eliminated/won status.
+  const knownAssassin = record.knownAssassin || null;
+
   if (record.status === "eliminated") {
     // "following" is reassigned by /api/eliminate whenever the person they
     // were following also goes out, so it's always whoever is currently
@@ -80,15 +99,16 @@ export async function buildReveal(env, record, token) {
       const followingRecord = followingRaw ? JSON.parse(followingRaw) : null;
       following = { name: record.following, kills: followingRecord?.kills || 0 };
     }
-    return { eliminated: true, eliminatedBy: record.eliminatedBy, following, claimToken: token };
+    return { eliminated: true, eliminatedBy: record.eliminatedBy, following, knownAssassin, claimToken: token };
   }
   if (record.status === "won") {
-    return { won: true, claimToken: token };
+    return { won: true, knownAssassin, claimToken: token };
   }
   const targetPhoto = await env.ASSASSIN_KV.get(photoKey(record.targetName));
   return {
     targetName: record.targetName,
     targetPhoto: targetPhoto || null,
+    knownAssassin,
     claimToken: token,
   };
 }
