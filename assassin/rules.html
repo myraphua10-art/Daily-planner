@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Assassin - Rules</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f3efe2; --card:#faf7ee; --ink:#211f1a; --sub:#6e6a5c; --line:#ded6bf; --accent:#1c1a15; --gold:#a4762f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; font-family:"EB Garamond", Georgia, serif;
+    background:var(--paper); color:var(--ink);
+    display:flex; justify-content:center; padding:24px;
+  }
+  .card{
+    position:relative; background:var(--card); border:1px solid var(--line); border-radius:6px;
+    box-shadow:0 6px 30px rgba(30,26,16,0.10);
+    padding:40px 32px 48px; max-width:560px; width:100%; overflow:hidden;
+  }
+  .sparkle{position:absolute; opacity:.5; color:var(--ink);}
+  .sparkle.s1{top:14px; right:22px; font-size:20px;}
+  .sparkle.s2{bottom:18px; left:20px; font-size:14px;}
+  a.back{
+    display:inline-block; font-size:12.5px; color:var(--sub); text-decoration:none; margin-bottom:22px;
+    letter-spacing:.05em;
+  }
+  a.back:hover{color:var(--ink);}
+  h1{
+    font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700;
+    font-size:38px; margin:0 0 4px; text-align:center; letter-spacing:.01em;
+  }
+  p.date{
+    text-align:center; color:var(--gold); font-size:13px; text-transform:uppercase; letter-spacing:.16em;
+    font-weight:700; margin:0 0 28px;
+  }
+  hr{border:none; border-top:1px solid var(--line); margin:28px 0;}
+  h2{
+    font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700;
+    font-size:22px; margin:0 0 16px; text-align:center; color:var(--ink);
+  }
+  p.premise{font-size:16px; line-height:1.7; text-align:center; margin:0;}
+  table{width:100%; border-collapse:collapse; font-size:14.5px;}
+  table td{padding:9px 6px; border-bottom:1px solid var(--line); vertical-align:top;}
+  table tr:last-child td{border-bottom:none;}
+  table td:first-child{
+    font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700;
+    color:var(--gold); white-space:nowrap; padding-right:16px; width:70px;
+  }
+  .rule{margin-bottom:24px;}
+  .rule:last-child{margin-bottom:0;}
+  .rule h3{
+    font-size:14px; margin:0 0 6px; letter-spacing:.02em;
+    display:flex; gap:8px; align-items:baseline;
+  }
+  .rule h3 .num{
+    font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700;
+    color:var(--gold); font-size:16px;
+  }
+  .rule p{font-size:15px; line-height:1.65; margin:0 0 8px; color:var(--ink);}
+  .rule p:last-child{margin-bottom:0;}
+  .rule p b, .rule p strong{color:var(--accent);}
+  .tagline{font-size:14px; color:#544f3f; margin:36px 0 0; text-align:center; font-weight:700;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <span class="sparkle s1">&#10022;</span>
+    <span class="sparkle s2">&#10022;</span>
+    <a class="back" href="./index.html">&larr; Back to the game</a>
+
+    <h1>Assassin</h1>
+    <p class="date">30 August</p>
+
+    <h2>The Premise</h2>
+    <p class="premise">You have a photo of yourself taped to your back. It is your life.<br><br>Somewhere in this building, one person has been assigned to take it. You have been assigned to take someone else's.</p>
+
+    <hr>
+
+    <h2>The Schedule</h2>
+    <table>
+      <tr><td>4:00</td><td>Arrival. Photos go on backs. No targets yet &mdash; nobody is hunting anybody.</td></tr>
+      <tr><td>4:30</td><td>Kahoot. The loser begins the game with a bounty.</td></tr>
+      <tr><td>4:45</td><td>Targets are released. The game is live.</td></tr>
+      <tr><td>5:45</td><td>Game ends. Survivors face off.</td></tr>
+      <tr><td>6:45</td><td>Depart for St Regis.</td></tr>
+    </table>
+
+    <hr>
+
+    <h2>The Rules</h2>
+
+    <div class="rule">
+      <h3><span class="num">1.</span> The photo is your life</h3>
+      <p>A laminated photo of you is taped to your upper back. If your assassin snatches it, you are dead.</p>
+    </div>
+
+    <div class="rule">
+      <h3><span class="num">2.</span> One secret target</h3>
+      <p>Your target is assigned here at 4:45. Tell no one. When you make a kill, this site automatically reassigns you their target. The chain continues until one player remains.</p>
+    </div>
+
+    <div class="rule">
+      <h3><span class="num">3.</span> The kill</h3>
+      <p>Snatch your target's photo off their back in one clean grab.</p>
+      <p>No wrestling or pushing. <b>No running.</b></p>
+    </div>
+
+    <div class="rule">
+      <h3><span class="num">4.</span> Defence</h3>
+      <p>You may dodge, turn, walk away, or keep your back covered.</p>
+      <p>There are no calls. No timeouts. No immunity. If you see them coming, move.</p>
+    </div>
+
+    <div class="rule">
+      <h3><span class="num">5.</span> No shielding</h3>
+      <p>No standing with your back to a wall for more than two minutes. No covering your photo with hands, bags, or hair.</p>
+    </div>
+
+    <div class="rule">
+      <h3><span class="num">6.</span> Accidents don't count</h3>
+      <p>If your photo falls off or is damaged on its own, you are <b>not</b> dead. Find me and reattach it.</p>
+      <p>Only a deliberate snatch by your assassin counts.</p>
+    </div>
+
+    <div class="rule">
+      <h3><span class="num">7.</span> The bounty</h3>
+      <p>Whoever loses the Kahoot is fair game for <b>everyone</b> for the first 20 minutes. Any player may take their photo.</p>
+      <p>The bounty hunter earns a reward, revealed on the day. The chain is unaffected &mdash; the bounty player's assigned assassin inherits their target as normal.</p>
+      <p>Survive the 20 minutes and the bounty expires. You are a regular player with a story.</p>
+      <p>No bathroom camping during your bounty: five minutes total, maximum.</p>
+    </div>
+
+    <div class="rule">
+      <h3><span class="num">8.</span> The map</h3>
+      <p><b>In play:</b> Level 24 function room, [AREAS].</p>
+      <p><b>Out of bounds:</b> the pool area. Nobody goes near the water.</p>
+      <p>Leaving the map to hide = frozen for 10 minutes.</p>
+      <p>Bathrooms are the only safe zone.</p>
+    </div>
+
+    <div class="rule">
+      <h3><span class="num">9.</span> The dead film the living</h3>
+      <p>Once eliminated, you join the camera crew. Follow the survivors. Document the hunt.</p>
+      <p>You may not help. No warnings, no pointing, no glancing, no blocking.</p>
+    </div>
+
+    <div class="rule">
+      <h3><span class="num">10.</span> The endgame</h3>
+      <p>At <b>5:30</b>, all surviving players must return to the function room and remain there.</p>
+      <p>At <b>5:45</b>, targets dissolve. Everyone hunts everyone. Any photo is fair game.</p>
+      <p>The last photo standing wins.</p>
+    </div>
+
+    <p class="tagline">This will be the death of you.....</p>
+  </div>
+</body>
+</html>
