@@ -163,6 +163,11 @@
     </div>
     <div id="immunityResult"></div>
 
+    <h2>Dinner menu tally</h2>
+    <p class="sub">See who has submitted their order on the <a href="./menu.html" target="_blank">menu page</a>, with a running count per dish and any allergy notes.</p>
+    <button id="loadMenuBtn">Load menu tally</button>
+    <div id="menuResult" style="margin-top:10px;"></div>
+
     <h2>Kill codes</h2>
     <p class="sub">Each player has a code (built from their own name, scrambled with extra letters) to write on the back of their laminated photo. When someone catches their target, they rip the photo off and enter this code to confirm the kill. Doesn't reveal any pairings - just each person's own code.</p>
     <button id="loadKillCodesBtn">Load kill codes</button>
@@ -728,6 +733,58 @@
         resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
     }
+
+    document.getElementById("loadMenuBtn").addEventListener("click", async () => {
+      const resultEl = document.getElementById("menuResult");
+      resultEl.innerHTML = `<div class="msg info">Loading...</div>`;
+      try {
+        const res = await fetch("/api/admin-menu", { method: "POST", headers: adminHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load menu tally.");
+
+        const submitted = data.rows.filter((r) => r.main).sort((a, b) => a.name.localeCompare(b.name));
+        const missing = data.rows.filter((r) => !r.main).sort((a, b) => a.name.localeCompare(b.name));
+        const labelFor = (id) => data.options.find((o) => o.id === id)?.label || id;
+
+        resultEl.innerHTML = `
+          <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:14px;">
+            <tr style="text-align:left; color:var(--sub); font-size:11px; text-transform:uppercase; letter-spacing:.05em;">
+              <th style="padding:4px;">Dish</th><th style="padding:4px;">Count</th>
+            </tr>
+            ${data.options
+              .map(
+                (o) => `
+              <tr style="border-top:1px solid var(--line);">
+                <td style="padding:6px 4px;">${o.label}</td>
+                <td style="padding:6px 4px;">${data.counts[o.id] || 0}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </table>
+
+          <div style="font-size:12.5px; font-weight:600; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px;">Submitted (${submitted.length}/${data.rows.length})</div>
+          <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:14px;">
+            ${submitted
+              .map(
+                (r) => `
+              <tr style="border-top:1px solid var(--line);">
+                <td style="padding:6px 4px;">${r.name}</td>
+                <td style="padding:6px 4px;">${labelFor(r.main)}</td>
+                <td style="padding:6px 4px; color:${r.allergies ? "#7a2e20" : "var(--sub)"};">${r.allergies || "-"}</td>
+              </tr>
+            `
+              )
+              .join("") || `<tr><td style="padding:6px 4px; color:var(--sub);">Nobody yet.</td></tr>`}
+          </table>
+
+          <div style="font-size:12.5px; font-weight:600; color:var(--sub); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px;">Not submitted yet (${missing.length})</div>
+          <div style="font-size:13px;">${missing.map((r) => r.name).join(", ") || "Everyone's in."}</div>
+        `;
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
 
     document.getElementById("loadKillCodesBtn").addEventListener("click", () => loadKillCodes(false));
     document.getElementById("regenerateKillCodesBtn").addEventListener("click", () => {

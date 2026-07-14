@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Assassin - Dinner Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,600;1,700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f3efe2; --card:#faf7ee; --ink:#211f1a; --sub:#6e6a5c; --line:#ded6bf; --accent:#1c1a15; --gold:#a4762f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; font-family:"EB Garamond", Georgia, serif;
+    background:var(--paper); color:var(--ink);
+    display:flex; justify-content:center; padding:24px;
+  }
+  .card{
+    position:relative; background:var(--card); border:1px solid var(--line); border-radius:6px;
+    box-shadow:0 6px 30px rgba(30,26,16,0.10);
+    padding:40px 32px 48px; max-width:520px; width:100%; overflow:hidden;
+  }
+  .sparkle{position:absolute; opacity:.5; color:var(--ink);}
+  .sparkle.s1{top:14px; right:22px; font-size:20px;}
+  .sparkle.s2{bottom:18px; left:20px; font-size:14px;}
+  a.back{
+    display:inline-block; font-size:12.5px; color:var(--sub); text-decoration:none; margin-bottom:22px;
+    letter-spacing:.05em;
+  }
+  a.back:hover{color:var(--ink);}
+  h1{
+    font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:700;
+    font-size:34px; margin:0 0 4px; text-align:center; letter-spacing:.01em;
+  }
+  p.sub-head{
+    text-align:center; color:var(--sub); font-size:14.5px; margin:0 0 28px; line-height:1.55;
+  }
+  hr{border:none; border-top:1px solid var(--line); margin:24px 0;}
+  h2{
+    font-size:12.5px; margin:0 0 12px; text-transform:uppercase; letter-spacing:.1em; color:var(--sub); font-weight:600;
+  }
+  label{font-size:12.5px; font-weight:600; color:var(--sub); display:block; margin-bottom:6px; letter-spacing:.03em;}
+  select, input[type="text"], textarea{
+    width:100%; padding:12px 14px; border-radius:3px; border:1px solid var(--line); font-size:15px;
+    margin-bottom:18px; background:#fffdf7; font-family:"EB Garamond", Georgia, serif; color:var(--ink);
+  }
+  .options{margin-bottom:18px;}
+  .option{
+    display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line);
+    border-radius:3px; margin-bottom:8px; cursor:pointer; background:#fffdf7;
+  }
+  .option:has(input:checked){border-color:var(--gold); background:#fbf3e4;}
+  .option input{margin-top:5px; accent-color:var(--gold); flex-shrink:0;}
+  .option .name{
+    font-family:"Playfair Display", Georgia, serif; font-style:italic; font-weight:600; font-size:15.5px; display:block;
+  }
+  .option .desc{font-size:13px; color:var(--sub); display:block; margin-top:2px;}
+  button{
+    padding:14px 16px; border-radius:3px; border:1px solid var(--accent); background:var(--accent); color:var(--card);
+    font-size:13px; font-weight:600; cursor:pointer; width:100%; letter-spacing:.1em; text-transform:uppercase;
+    font-family:"EB Garamond", Georgia, serif;
+  }
+  button:disabled{opacity:.5; cursor:not-allowed;}
+  .msg{font-size:14px; padding:12px 14px; border-radius:3px; margin-bottom:14px; border:1px solid var(--line);}
+  .msg.error{background:#f8ece9; color:#7a2e20; border-color:#e3c6bd;}
+  .msg.info{background:#f1efe4; color:#544f3f;}
+  .msg.success{background:#eef1e6; color:#3d4a2f; border-color:#cdd8bd;}
+  .hidden{display:none;}
+  .tagline{font-size:14px; color:#544f3f; margin:32px 0 0; text-align:center; font-weight:700;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <span class="sparkle s1">&#10022;</span>
+    <span class="sparkle s2">&#10022;</span>
+    <a class="back" href="./index.html">&larr; Back to the game</a>
+
+    <h1>The Menu</h1>
+    <p class="sub-head">Choose your last meal. One entry per person &mdash; submitting again just updates your order.</p>
+
+    <div id="topMsg"></div>
+
+    <form id="menuForm">
+      <h2>Your name</h2>
+      <select id="nameSelect"></select>
+
+      <h2>Main course</h2>
+      <div class="options" id="optionsArea"></div>
+
+      <h2>Allergies / dietary notes</h2>
+      <label for="allergiesInput">Optional</label>
+      <input type="text" id="allergiesInput" placeholder="e.g. nut allergy, no pork">
+
+      <button id="submitBtn" type="submit">Confirm my order</button>
+    </form>
+
+    <p class="tagline">This will be the death of you.....</p>
+  </div>
+
+  <script type="module">
+    const nameSelect = document.getElementById("nameSelect");
+    const optionsArea = document.getElementById("optionsArea");
+    const allergiesInput = document.getElementById("allergiesInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const topMsg = document.getElementById("topMsg");
+    const menuForm = document.getElementById("menuForm");
+
+    let players = [];
+    let options = [];
+
+    function showMsg(text, type = "info") {
+      topMsg.innerHTML = `<div class="msg ${type}">${text}</div>`;
+    }
+
+    function renderOptions(selectedId) {
+      optionsArea.innerHTML = options
+        .map(
+          (o) => `
+        <label class="option">
+          <input type="radio" name="main" value="${o.id}" ${o.id === selectedId ? "checked" : ""} required>
+          <span>
+            <span class="name">${o.label}</span>
+            <span class="desc">${o.desc}</span>
+          </span>
+        </label>
+      `
+        )
+        .join("");
+    }
+
+    async function loadExisting(name) {
+      if (!name) {
+        renderOptions(null);
+        allergiesInput.value = "";
+        return;
+      }
+      try {
+        const res = await fetch(`/api/menu?name=${encodeURIComponent(name)}`);
+        const data = await res.json();
+        renderOptions(data.main || null);
+        allergiesInput.value = data.allergies || "";
+      } catch (e) {
+        renderOptions(null);
+      }
+    }
+
+    async function init() {
+      const res = await fetch("/api/game");
+      const game = await res.json();
+      players = (game.players || []).slice().sort((a, b) => a.localeCompare(b));
+
+      if (!players.length) {
+        showMsg("The guest list isn't set up yet - check back soon.", "info");
+        menuForm.classList.add("hidden");
+        return;
+      }
+
+      options = [
+        { id: "paccheri", label: "Paccheri Pomodoro e Ricotta", desc: "datterino tomato sauce, ricotta, marjoram, orange zest" },
+        { id: "rigatoni", label: "Rigatoni alla Carbonara", desc: "cured pork cheek, egg yolk, pecorino romano" },
+        { id: "pappardelle", label: "Pappardelle al Ragù", desc: "hand-cut wagyu beef ragout, pepper berries, grana padano" },
+        { id: "pollo", label: "Pollo e Peperoni", desc: "chicken breast alla diavola, stewed capsicum, taggiasca olives" },
+        { id: "margherita", label: "Margherita", desc: "tomato sauce, fior di latte, basil" },
+        { id: "parma", label: "Parma", desc: "tomato sauce, fior di latte, parma ham" },
+      ];
+
+      nameSelect.innerHTML = players.map((p) => `<option value="${p}">${p}</option>`).join("");
+
+      const savedName = localStorage.getItem("assassin_menu_name") || players[0];
+      nameSelect.value = players.includes(savedName) ? savedName : players[0];
+      await loadExisting(nameSelect.value);
+    }
+
+    nameSelect.addEventListener("change", () => {
+      localStorage.setItem("assassin_menu_name", nameSelect.value);
+      loadExisting(nameSelect.value);
+    });
+
+    menuForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = nameSelect.value;
+      const main = menuForm.querySelector('input[name="main"]:checked')?.value;
+      if (!main) {
+        showMsg("Pick a main course.", "error");
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Saving...";
+      try {
+        const res = await fetch("/api/submit-menu", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name, main, allergies: allergiesInput.value.trim() }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to save your order.");
+        localStorage.setItem("assassin_menu_name", name);
+        showMsg(`Order confirmed for ${name}.`, "success");
+      } catch (e) {
+        showMsg(e.message, "error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Confirm my order";
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

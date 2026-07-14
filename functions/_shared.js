@@ -66,6 +66,21 @@ export function removalBackupKey(name) {
   return `removal-backup:${slugify(name)}`;
 }
 
+// Dinner order, keyed by player - overwritten on resubmit so there's always
+// exactly one current answer per person instead of a scrolling thread.
+export function menuKey(name) {
+  return `menu:${slugify(name)}`;
+}
+
+export const MENU_OPTIONS = [
+  { id: "paccheri", label: "Paccheri Pomodoro e Ricotta", desc: "datterino tomato sauce, ricotta, marjoram, orange zest" },
+  { id: "rigatoni", label: "Rigatoni alla Carbonara", desc: "cured pork cheek, egg yolk, pecorino romano" },
+  { id: "pappardelle", label: "Pappardelle al Ragù", desc: "hand-cut wagyu beef ragout, pepper berries, grana padano" },
+  { id: "pollo", label: "Pollo e Peperoni", desc: "chicken breast alla diavola, stewed capsicum, taggiasca olives" },
+  { id: "margherita", label: "Margherita", desc: "tomato sauce, fior di latte, basil" },
+  { id: "parma", label: "Parma", desc: "tomato sauce, fior di latte, parma ham" },
+];
+
 // A bounty is only snatchable for a limited window after it's set - after
 // that it quietly reverts to a normal target, same as if it were never
 // flagged. Time-based rather than a plain flag, same pattern as every other
