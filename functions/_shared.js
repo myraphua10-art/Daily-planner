@@ -77,8 +77,6 @@ export const MENU_OPTIONS = [
   { id: "rigatoni", label: "Rigatoni alla Carbonara", desc: "cured pork cheek, egg yolk, pecorino romano" },
   { id: "pappardelle", label: "Pappardelle al Ragù", desc: "hand-cut wagyu beef ragout, pepper berries, grana padano" },
   { id: "pollo", label: "Pollo e Peperoni", desc: "chicken breast alla diavola, stewed capsicum, taggiasca olives" },
-  { id: "margherita", label: "Margherita", desc: "tomato sauce, fior di latte, basil" },
-  { id: "parma", label: "Parma", desc: "tomato sauce, fior di latte, parma ham" },
 ];
 
 // A bounty is only snatchable for a limited window after it's set - after
