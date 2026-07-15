@@ -1,4 +1,4 @@
-import { json, getGame, putGame, assignKey, proofKey, isBountyActive } from "../_shared.js";
+import { json, getGame, putGame, assignKey, proofKey, isBountyActive, resolveFilming } from "../_shared.js";
 
 // Guest-facing. Lets any active player OTHER than the bounty target's own
 // assigned hunter catch the bounty for a reward, without disrupting the
@@ -85,7 +85,7 @@ export async function onRequestPost({ request, env }) {
   bountyRecord.status = "eliminated";
   bountyRecord.eliminatedBy = snatcherName;
   bountyRecord.eliminatedAt = Date.now();
-  bountyRecord.following = snatcherName;
+  bountyRecord.following = await resolveFilming(env, game, bountyName, snatcherName);
   await env.ASSASSIN_KV.put(bountyKey, JSON.stringify(bountyRecord));
   await env.ASSASSIN_KV.put(proofKey(bountyName), proofPhotoDataUrl);
 

@@ -1,4 +1,4 @@
-import { json, getGame, assignKey, proofKey } from "../_shared.js";
+import { json, getGame, assignKey, proofKey, resolveFilming } from "../_shared.js";
 
 // Guest-facing. Reports that the caller (proven via their own claim token)
 // eliminated their current target. The eliminated player is marked out, and
@@ -61,9 +61,10 @@ export async function onRequestPost({ request, env }) {
   targetRecord.status = "eliminated";
   targetRecord.eliminatedBy = match;
   targetRecord.eliminatedAt = Date.now();
-  // The person just eliminated now follows their killer around to document
-  // the rest of their game (photos/videos, for the host to collect later).
-  targetRecord.following = match;
+  // The person just eliminated now films someone still in the game -
+  // normally their killer, unless the host has set a personal override for
+  // them (see resolveFilming).
+  targetRecord.following = await resolveFilming(env, game, eliminatedName, match);
   await env.ASSASSIN_KV.put(targetKey, JSON.stringify(targetRecord));
   await env.ASSASSIN_KV.put(proofKey(eliminatedName), proofPhotoDataUrl);
 

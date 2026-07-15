@@ -72,6 +72,21 @@ export function menuKey(name) {
   return `menu:${slugify(name)}`;
 }
 
+// Decides who a newly-eliminated player has to film. A host-set override
+// (a personal pre-request, e.g. "if I die, make X the one I have to film")
+// wins as long as that person is still in the game (active or already won);
+// once that person is themselves eliminated, it falls back to the normal
+// rule of following whoever actually got you.
+export async function resolveFilming(env, game, eliminatedName, eliminatedBy) {
+  const overrideTarget = game?.filmOverrides?.[eliminatedName];
+  if (overrideTarget) {
+    const raw = await env.ASSASSIN_KV.get(assignKey(overrideTarget));
+    const rec = raw ? JSON.parse(raw) : null;
+    if (rec && rec.status !== "eliminated") return overrideTarget;
+  }
+  return eliminatedBy;
+}
+
 export const MENU_OPTIONS = [
   { id: "paccheri", label: "Paccheri Pomodoro e Ricotta", desc: "datterino tomato sauce, ricotta, marjoram, orange zest" },
   { id: "rigatoni", label: "Rigatoni alla Carbonara", desc: "cured pork cheek, egg yolk, pecorino romano" },

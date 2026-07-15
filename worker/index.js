@@ -24,6 +24,7 @@ import { onRequestPost as snatchBountyPost } from "../functions/api/snatch-bount
 import { onRequestGet as menuGet } from "../functions/api/menu.js";
 import { onRequestPost as submitMenuPost } from "../functions/api/submit-menu.js";
 import { onRequestPost as adminMenuPost } from "../functions/api/admin-menu.js";
+import { onRequestPost as setFilmOverridesPost } from "../functions/api/set-film-overrides.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -53,6 +54,7 @@ const routes = {
   "GET /api/menu": menuGet,
   "POST /api/submit-menu": submitMenuPost,
   "POST /api/admin-menu": adminMenuPost,
+  "POST /api/set-film-overrides": setFilmOverridesPost,
 };
 
 export default {

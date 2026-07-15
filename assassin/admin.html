@@ -85,6 +85,12 @@
     <button id="saveBirthdaysBtn">Save birthdays</button>
     <div id="birthdaysResult"></div>
 
+    <h2>Filming assignment overrides</h2>
+    <p class="sub">By default, whoever gets eliminated has to film whoever got them. To override that for specific people (e.g. two friends who want to film each other no matter who's out first), enter one "Name, Person they must film" per line. Only applies while that person is still in the game - once they're eliminated too, it falls back to the normal rule. Leave the second part blank to clear someone's override.</p>
+    <textarea id="filmOverridesInput" placeholder="Myra, Jayna&#10;Jayna, Myra"></textarea>
+    <button id="saveFilmOverridesBtn">Save overrides</button>
+    <div id="filmOverridesResult"></div>
+
     <h2>Reset a claim</h2>
     <p class="sub">If someone switches phones and loses access to their own reveal, type their exact name to let them claim it again on the new device. This does not show you their target.</p>
     <div class="row">
@@ -192,6 +198,7 @@
     const statusArea = document.getElementById("statusArea");
     const playersInput = document.getElementById("playersInput");
     const birthdaysInput = document.getElementById("birthdaysInput");
+    const filmOverridesInput = document.getElementById("filmOverridesInput");
     const linkSection = document.getElementById("linkSection");
     const guestLink = document.getElementById("guestLink");
 
@@ -239,6 +246,9 @@
       playersInput.value = players.join("\n");
       birthdaysInput.value = players
         .map((name) => (game.birthdays?.[name] ? `${name}, ${game.birthdays[name]}` : name))
+        .join("\n");
+      filmOverridesInput.value = Object.entries(game.filmOverrides || {})
+        .map(([name, target]) => `${name}, ${target}`)
         .join("\n");
 
       if (game.locked) {
@@ -312,6 +322,33 @@
         if (!res.ok) throw new Error(data.error || "Failed to save birthdays.");
         const errorNote = data.errors?.length ? ` (${data.errors.join("; ")})` : "";
         resultEl.innerHTML = `<div class="msg ${data.errors?.length ? "error" : "success"}">Saved ${data.count} birthday(s).${errorNote}</div>`;
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
+
+    document.getElementById("saveFilmOverridesBtn").addEventListener("click", async () => {
+      const resultEl = document.getElementById("filmOverridesResult");
+      try {
+        const overrides = filmOverridesInput.value
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => {
+            const [name, ...rest] = line.split(",");
+            return { name: (name || "").trim(), filmTarget: rest.join(",").trim() };
+          })
+          .filter((entry) => entry.name);
+
+        const res = await fetch("/api/set-film-overrides", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ overrides }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to save overrides.");
+        const errorNote = data.errors?.length ? ` (${data.errors.join("; ")})` : "";
+        resultEl.innerHTML = `<div class="msg ${data.errors?.length ? "error" : "success"}">Saved. ${data.count} override(s) active.${errorNote}</div>`;
       } catch (e) {
         resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
