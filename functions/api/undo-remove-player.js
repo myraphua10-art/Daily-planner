@@ -59,7 +59,6 @@ export async function onRequestPost({ request, env }) {
     ...game,
     players: backup.playersBefore,
     birthdays: backup.birthdaysBefore,
-    bountyTarget: backup.bountyTargetBefore,
   });
 
   await env.ASSASSIN_KV.delete(backupKey);

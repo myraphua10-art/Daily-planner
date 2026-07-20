@@ -80,7 +80,6 @@ export async function onRequestPost({ request, env }) {
 
   const birthdays = { ...(game.birthdays || {}) };
   delete birthdays[match];
-  const bountyTarget = game.bountyTarget?.toLowerCase() === match.toLowerCase() ? null : game.bountyTarget;
 
   const backup = {
     removedName: match,
@@ -90,12 +89,11 @@ export async function onRequestPost({ request, env }) {
     affectedFollowers,
     playersBefore: game.players,
     birthdaysBefore: game.birthdays || {},
-    bountyTargetBefore: game.bountyTarget || null,
     removedAt: Date.now(),
   };
   await env.ASSASSIN_KV.put(removalBackupKey(match), JSON.stringify(backup));
 
-  await putGame(env, { ...game, players: others, birthdays, bountyTarget });
+  await putGame(env, { ...game, players: others, birthdays });
 
   return json({ ok: true, removed: match });
 }

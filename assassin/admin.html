@@ -150,14 +150,6 @@
     </div>
     <button id="downloadPaparazziBtn" class="hidden" style="margin-top:8px;">Download selected</button>
 
-    <h2>Bounty target</h2>
-    <p class="sub">Pick one active player as a public "high-value target," shown on the status board and guest pages. For the next 20 minutes, ANY active player (not just their real hunter) can catch them with proof + their kill code for a reward - their real assassin still silently inherits the chain either way, so nothing breaks. Expires automatically after 20 minutes if nobody catches them. Leave the name blank and click Set to clear it early.</p>
-    <div class="row">
-      <div><input type="text" id="bountyNameInput" placeholder="Exact name (blank to clear)"></div>
-    </div>
-    <button id="bountyBtn">Set bounty</button>
-    <div id="bountyResult"></div>
-
     <h2>Immunity grant</h2>
     <p class="sub">Give one active player temporary protection - nobody can eliminate them while immune. You decide when to use this; the option is just ready here for when you do.</p>
     <div class="row">
@@ -692,23 +684,6 @@
     document.getElementById("paparazziSelectNoneBtn").addEventListener("click", () => setAllChecked("paparazziGrid", false));
     document.getElementById("downloadPaparazziBtn").addEventListener("click", (e) => {
       downloadChecked("paparazziGrid", loadedPaparazzi, e.currentTarget);
-    });
-
-    document.getElementById("bountyBtn").addEventListener("click", async () => {
-      const name = document.getElementById("bountyNameInput").value.trim();
-      const resultEl = document.getElementById("bountyResult");
-      try {
-        const res = await fetch("/api/set-bounty", {
-          method: "POST",
-          headers: adminHeaders({ "content-type": "application/json" }),
-          body: JSON.stringify({ name: name || null }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to set bounty.");
-        resultEl.innerHTML = `<div class="msg success">${data.bountyTarget ? `Bounty set on ${data.bountyTarget}.` : "Bounty cleared."}</div>`;
-      } catch (e) {
-        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
-      }
     });
 
     async function setImmunity(immune) {
