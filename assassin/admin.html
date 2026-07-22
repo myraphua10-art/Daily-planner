@@ -85,6 +85,11 @@
     <button id="saveBirthdaysBtn">Save birthdays</button>
     <div id="birthdaysResult"></div>
 
+    <h2>Reshuffle pairings</h2>
+    <p class="sub">If too many pairings have leaked before the game starts, this deals everyone a completely new target in one go &mdash; the rigged pairing stays forced, and nobody has to re-claim their name or change their photo/kill code. They'll simply see a new target next time they open their page. Only works before the first elimination; after that it would break the chain.</p>
+    <button id="reshuffleBtn" class="danger">Reshuffle all pairings</button>
+    <div id="reshuffleResult"></div>
+
     <h2>Filming assignment overrides</h2>
     <p class="sub">By default, whoever gets eliminated has to film whoever got them. To override that for specific people (e.g. two friends who want to film each other no matter who's out first), enter one "Name, Person they must film" per line. Only applies while that person is still in the game - once they're eliminated too, it falls back to the normal rule. Leave the second part blank to clear someone's override.</p>
     <textarea id="filmOverridesInput" placeholder="Myra, Jayna&#10;Jayna, Myra"></textarea>
@@ -314,6 +319,24 @@
         if (!res.ok) throw new Error(data.error || "Failed to save birthdays.");
         const errorNote = data.errors?.length ? ` (${data.errors.join("; ")})` : "";
         resultEl.innerHTML = `<div class="msg ${data.errors?.length ? "error" : "success"}">Saved ${data.count} birthday(s).${errorNote}</div>`;
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
+    });
+
+    document.getElementById("reshuffleBtn").addEventListener("click", async () => {
+      const resultEl = document.getElementById("reshuffleResult");
+      if (!confirm(
+        "Deal EVERYONE a brand-new target right now? Old targets stop being valid immediately, and even you won't see the new ones. This can't be undone."
+      )) return;
+      try {
+        const res = await fetch("/api/reshuffle", {
+          method: "POST",
+          headers: adminHeaders(),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to reshuffle.");
+        resultEl.innerHTML = `<div class="msg success">Reshuffled! ${data.count} new targets dealt. Tell everyone to re-open their page.</div>`;
       } catch (e) {
         resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
