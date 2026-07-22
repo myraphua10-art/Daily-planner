@@ -1,4 +1,4 @@
-import { json, getGame, putGame, requireAdmin, assignKey } from "../_shared.js";
+import { json, getGame, putGame, requireAdmin, assignKey, riggedChainFromGame } from "../_shared.js";
 import { generateAssassinCycle, generateKillCode } from "../../assassin/game-logic.js";
 
 // Admin only. Runs entirely on Cloudflare's servers - the resulting
@@ -13,7 +13,7 @@ export async function onRequestPost({ request, env }) {
 
   let assignments;
   try {
-    assignments = generateAssassinCycle(game.players, game.riggedHunter, game.riggedTarget);
+    assignments = generateAssassinCycle(game.players, riggedChainFromGame(game));
   } catch (e) {
     return json({ error: e.message }, 400);
   }

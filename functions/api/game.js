@@ -15,6 +15,7 @@ export async function onRequestGet({ request, env }) {
       ...base,
       riggedHunter: game?.riggedHunter ?? "",
       riggedTarget: game?.riggedTarget ?? "",
+      riggedChain: game?.riggedChain ?? [],
       birthdays: game?.birthdays ?? {},
       filmOverrides: game?.filmOverrides ?? {},
     });
@@ -34,9 +35,15 @@ export async function onRequestPost({ request, env }) {
   const players = Array.isArray(body.players) ? body.players.map(String) : [];
   if (players.length < 3) return json({ error: "Need at least 3 players." }, 400);
 
-  const riggedHunter = String(body.riggedHunter || "").trim();
-  const riggedTarget = String(body.riggedTarget || "").trim();
+  // Prefer an ordered riggedChain if given; fall back to the legacy
+  // hunter/target pair. Store both so either reader stays happy.
+  const chain = Array.isArray(body.riggedChain)
+    ? body.riggedChain.map((n) => String(n || "").trim()).filter(Boolean)
+    : [String(body.riggedHunter || "").trim(), String(body.riggedTarget || "").trim()].filter(Boolean);
 
-  await putGame(env, { ...existing, players, riggedHunter, riggedTarget, locked: false });
+  const riggedHunter = chain[0] || "";
+  const riggedTarget = chain[1] || "";
+
+  await putGame(env, { ...existing, players, riggedChain: chain, riggedHunter, riggedTarget, locked: false });
   return json({ ok: true });
 }

@@ -35,11 +35,15 @@ export function slugify(name) {
 }
 
 // Builds a single Hamiltonian loop over `players` (everyone hunts exactly one
-// person, everyone is hunted by exactly one person, no self-targets) with the
-// edge riggedHunter -> riggedTarget forced. Everything else is a uniformly
-// random rotation of the remaining players, so the rest of the loop is a
-// genuine surprise - including to whoever runs this function.
-export function generateAssassinCycle(players, riggedHunter, riggedTarget) {
+// person, everyone is hunted by exactly one person, no self-targets) with an
+// ordered "rigged chain" of consecutive edges forced. A chain of
+// ["Jayna", "Myra", "Qingyang"] forces Jayna -> Myra -> Qingyang; everyone
+// else is a uniformly random rotation appended after the chain, so the rest
+// of the loop stays a genuine surprise - including to whoever runs this.
+//
+// Back-compat: also accepts the old (players, riggedHunter, riggedTarget)
+// string form, treated as a 2-long chain.
+export function generateAssassinCycle(players, riggedChain, maybeTarget) {
   const clean = players.map((p) => p.trim()).filter(Boolean);
 
   const seen = new Set();
@@ -50,23 +54,36 @@ export function generateAssassinCycle(players, riggedHunter, riggedTarget) {
   }
   if (clean.length < 3) throw new Error("Need at least 3 players to form a loop.");
 
-  const hunterIdx = clean.findIndex((p) => p.toLowerCase() === riggedHunter.trim().toLowerCase());
-  const targetIdx = clean.findIndex((p) => p.toLowerCase() === riggedTarget.trim().toLowerCase());
-  if (hunterIdx === -1) throw new Error(`"${riggedHunter}" is not in the guest list.`);
-  if (targetIdx === -1) throw new Error(`"${riggedTarget}" is not in the guest list.`);
-  if (hunterIdx === targetIdx) throw new Error("Rigged hunter and target must be different people.");
+  // Normalize the rigged chain from either the array form or the legacy
+  // (hunter, target) string form, matching each name back to its canonical
+  // spelling in the guest list.
+  const rawChain = Array.isArray(riggedChain)
+    ? riggedChain
+    : [riggedChain, maybeTarget];
 
-  const hunter = clean[hunterIdx];
-  const target = clean[targetIdx];
-  const rest = clean.filter((_, i) => i !== hunterIdx && i !== targetIdx);
+  const chain = [];
+  const chainSeen = new Set();
+  for (const raw of rawChain) {
+    const name = String(raw ?? "").trim();
+    if (!name) continue;
+    const match = clean.find((p) => p.toLowerCase() === name.toLowerCase());
+    if (!match) throw new Error(`"${name}" is not in the guest list.`);
+    if (chainSeen.has(match.toLowerCase())) {
+      throw new Error(`"${match}" can't appear twice in the forced chain.`);
+    }
+    chainSeen.add(match.toLowerCase());
+    chain.push(match);
+  }
 
-  // Fisher-Yates shuffle of everyone except the rigged pair.
+  const rest = clean.filter((p) => !chainSeen.has(p.toLowerCase()));
+
+  // Fisher-Yates shuffle of everyone not pinned in the chain.
   for (let i = rest.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [rest[i], rest[j]] = [rest[j], rest[i]];
   }
 
-  const order = [hunter, target, ...rest];
+  const order = [...chain, ...rest];
   const assignments = {};
   for (let i = 0; i < order.length; i++) {
     assignments[order[i]] = order[(i + 1) % order.length];

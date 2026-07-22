@@ -43,6 +43,16 @@ export function assignKey(name) {
   return `assign:${slugify(name)}`;
 }
 
+// The ordered list of forced hunter->target edges for cycle generation.
+// Prefers the newer `riggedChain` array; falls back to the legacy
+// hunter/target pair so older stored games keep working.
+export function riggedChainFromGame(game) {
+  if (Array.isArray(game?.riggedChain) && game.riggedChain.length) {
+    return game.riggedChain;
+  }
+  return [game?.riggedHunter, game?.riggedTarget].filter((x) => x && String(x).trim());
+}
+
 export function photoKey(name) {
   return `photo:${slugify(name)}`;
 }

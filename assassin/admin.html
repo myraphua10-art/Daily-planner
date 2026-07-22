@@ -189,8 +189,8 @@
       "Isabelle", "Adia", "Myra", "Rainie", "Elizabeth", "Charice", "Nicole",
       "Jayna", "Violet", "Ana", "Laetitia", "Katelyn", "Qingyang",
     ];
-    const RIGGED_HUNTER = "Jayna";
-    const RIGGED_TARGET = "Myra";
+    // Ordered forced chain: each name hunts the next. Jayna -> Myra -> Qingyang.
+    const RIGGED_CHAIN = ["Jayna", "Myra", "Qingyang"];
 
     let adminPasscode = "";
 
@@ -290,8 +290,7 @@
           headers: adminHeaders({ "content-type": "application/json" }),
           body: JSON.stringify({
             players,
-            riggedHunter: RIGGED_HUNTER,
-            riggedTarget: RIGGED_TARGET,
+            riggedChain: RIGGED_CHAIN,
           }),
         });
         const data = await res.json();
@@ -337,7 +336,8 @@
       try {
         const res = await fetch("/api/reshuffle", {
           method: "POST",
-          headers: adminHeaders(),
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ riggedChain: RIGGED_CHAIN }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to reshuffle.");
@@ -388,8 +388,7 @@
           headers: adminHeaders({ "content-type": "application/json" }),
           body: JSON.stringify({
             players,
-            riggedHunter: RIGGED_HUNTER,
-            riggedTarget: RIGGED_TARGET,
+            riggedChain: RIGGED_CHAIN,
           }),
         });
         const saveData = await saveRes.json();
