@@ -1,6 +1,7 @@
 import { onRequestGet as gameGet, onRequestPost as gamePost } from "../functions/api/game.js";
 import { onRequestPost as generatePost } from "../functions/api/generate.js";
 import { onRequestPost as reshufflePost } from "../functions/api/reshuffle.js";
+import { onRequestPost as adminFullMappingPost } from "../functions/api/admin-full-mapping.js";
 import { onRequestGet as targetGet } from "../functions/api/target.js";
 import { onRequestPost as resetPost } from "../functions/api/reset.js";
 import { onRequestPost as adminCheckPost } from "../functions/api/admin-check.js";
@@ -30,6 +31,7 @@ const routes = {
   "POST /api/game": gamePost,
   "POST /api/generate": generatePost,
   "POST /api/reshuffle": reshufflePost,
+  "POST /api/admin-full-mapping": adminFullMappingPost,
   "GET /api/target": targetGet,
   "POST /api/reset": resetPost,
   "POST /api/admin-check": adminCheckPost,

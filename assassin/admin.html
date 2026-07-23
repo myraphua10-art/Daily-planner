@@ -177,6 +177,11 @@
     <button id="regenerateKillCodesBtn" class="danger" style="margin-top:8px;">Regenerate ALL codes</button>
     <div id="killCodesResult" style="margin-top:10px;"></div>
 
+    <h2>Emergency: full mapping</h2>
+    <p class="sub">Reveals the complete hunter &rarr; target list, including who's hunting YOU. Once you look, the "not even Myra can see this" promise is broken for good - keep this for genuine emergencies (like verifying the game state on the day). Nothing on any guest page changes; only you see it.</p>
+    <button id="fullMappingBtn" class="danger">Reveal full mapping</button>
+    <div id="fullMappingResult" style="margin-top:10px;"></div>
+
   </div>
 
   <script type="module">
@@ -824,6 +829,45 @@
     document.getElementById("regenerateKillCodesBtn").addEventListener("click", () => {
       if (!confirm("Regenerate every player's kill code? Any codes already written on physical photos will stop working.")) return;
       loadKillCodes(true);
+    });
+
+    document.getElementById("fullMappingBtn").addEventListener("click", async () => {
+      const resultEl = document.getElementById("fullMappingResult");
+      if (!confirm(
+        "Reveal the FULL hunter → target mapping right now? You'll see every pairing, including who is hunting you. This can't be un-seen."
+      )) return;
+      resultEl.innerHTML = `<div class="msg info">Loading...</div>`;
+      try {
+        const res = await fetch("/api/admin-full-mapping", {
+          method: "POST",
+          headers: adminHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ confirm: true }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load mapping.");
+        resultEl.innerHTML = `
+          <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <tr style="text-align:left; color:var(--sub); font-size:11px; text-transform:uppercase; letter-spacing:.05em;">
+              <th style="padding:4px;">Hunter</th><th style="padding:4px;">Target</th><th style="padding:4px;">Status</th>
+            </tr>
+            ${data.rows
+              .slice()
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(
+                (r) => `
+              <tr style="border-top:1px solid var(--line);">
+                <td style="padding:6px 4px;">${r.name}</td>
+                <td style="padding:6px 4px;">${r.targetName || "-"}</td>
+                <td style="padding:6px 4px; color:var(--sub);">${r.status}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </table>
+        `;
+      } catch (e) {
+        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
+      }
     });
 
   </script>
