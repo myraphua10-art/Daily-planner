@@ -95,11 +95,6 @@
     background:transparent; border:none; color:var(--sub); margin-top:10px;
     font-weight:600; font-size:13px; letter-spacing:normal; text-transform:none; box-shadow:none;
   }
-  .follow-note{
-    text-align:center; font-size:13.5px; color:#544f3f; background:#f6efe0; border:1px solid #e3cfa1;
-    border-radius:3px; padding:10px 12px; margin-top:12px; line-height:1.5;
-  }
-  .follow-note b{color:var(--gold); font-family:"Playfair Display", Georgia, serif; font-style:italic;}
   .hidden{display:none;}
 </style>
 </head>
@@ -139,11 +134,6 @@
       <div class="target" id="revealText">-</div>
       <div class="target-sub hidden" id="revealSub"></div>
     </div>
-
-    <div id="followArea" class="follow-note hidden"></div>
-
-    <button id="paparazziBtn" class="text-btn hidden">Upload documentation photo/video</button>
-    <input type="file" id="paparazziInput" accept="image/*,video/*" class="hidden">
 
     <button id="killBtn" class="kill-btn hidden">I Got Them</button>
 
@@ -209,9 +199,6 @@
     const revealText = document.getElementById("revealText");
     const revealSub = document.getElementById("revealSub");
     const dossierPhoto = document.getElementById("dossierPhoto");
-    const followArea = document.getElementById("followArea");
-    const paparazziBtn = document.getElementById("paparazziBtn");
-    const paparazziInput = document.getElementById("paparazziInput");
     const killBtn = document.getElementById("killBtn");
     const changePhotoBtn = document.getElementById("changePhotoBtn");
     const changePhotoInput = document.getElementById("changePhotoInput");
@@ -253,8 +240,6 @@
       revealArea.classList.remove("hidden");
       revealArea.classList.remove("eliminated", "won");
       changePhotoBtn.classList.remove("hidden");
-      followArea.classList.add("hidden");
-      paparazziBtn.classList.add("hidden");
       revealSub.classList.add("hidden");
 
       if (result.eliminated) {
@@ -268,11 +253,6 @@
         revealSub.classList.remove("hidden");
         killBtn.classList.add("hidden");
         hintText.textContent = "Thanks for playing! Stick around to see who wins.";
-        if (result.following) {
-          followArea.innerHTML = `Follow them around and document their game - they are currently at ${result.following.kills} kills.`;
-          followArea.classList.remove("hidden");
-          paparazziBtn.classList.remove("hidden");
-        }
         return;
       }
 
@@ -553,56 +533,6 @@
         } finally {
           changePhotoBtn.disabled = false;
           changePhotoInput.value = "";
-        }
-      });
-
-      paparazziBtn.addEventListener("click", () => paparazziInput.click());
-
-      paparazziInput.addEventListener("change", async () => {
-        const file = paparazziInput.files[0];
-        if (!file) return;
-        paparazziBtn.disabled = true;
-        try {
-          if (file.type.startsWith("video/")) {
-            if (file.size > 50 * 1024 * 1024) {
-              showMessage("That video is too large - keep clips under 50MB.", "error");
-              return;
-            }
-            const res = await fetch("/api/upload-paparazzi", {
-              method: "POST",
-              headers: {
-                "x-claim-token": currentToken,
-                "x-uploader-name": currentName,
-                "content-type": file.type,
-              },
-              body: file,
-            });
-            const data = await res.json();
-            if (!res.ok) {
-              showMessage(data.error || "Something went wrong.", "error");
-              return;
-            }
-            showMessage("Video uploaded! Keep the documentation coming.", "info");
-          } else {
-            const resized = await resizeImage(file);
-            const res = await fetch("/api/upload-paparazzi", {
-              method: "POST",
-              headers: { "x-claim-token": currentToken, "content-type": "application/json" },
-              body: JSON.stringify({ name: currentName, photoDataUrl: resized }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-              showMessage(data.error || "Something went wrong.", "error");
-              return;
-            }
-            showMessage("Uploaded! Keep the documentation coming.", "info");
-          }
-        } catch (e) {
-          console.error(e);
-          showMessage("Something went wrong. Try again in a moment.", "error");
-        } finally {
-          paparazziBtn.disabled = false;
-          paparazziInput.value = "";
         }
       });
 

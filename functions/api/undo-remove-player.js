@@ -31,13 +31,6 @@ export async function onRequestPost({ request, env }) {
       return json({ error: `Can't undo - ${backup.affectedHunter}'s game has moved on since the removal.` }, 409);
     }
   }
-  for (const followerName of backup.affectedFollowers) {
-    const raw = await env.ASSASSIN_KV.get(assignKey(followerName));
-    const rec = raw ? JSON.parse(raw) : null;
-    if (!rec || rec.following?.toLowerCase() !== backup.redirectFollowersTo?.toLowerCase()) {
-      return json({ error: `Can't undo - ${followerName}'s game has moved on since the removal.` }, 409);
-    }
-  }
 
   await env.ASSASSIN_KV.put(assignKey(backup.removedName), JSON.stringify(backup.removedRecord));
 
@@ -46,13 +39,6 @@ export async function onRequestPost({ request, env }) {
     const rec = JSON.parse(raw);
     rec.targetName = backup.removedName;
     await env.ASSASSIN_KV.put(assignKey(backup.affectedHunter), JSON.stringify(rec));
-  }
-
-  for (const followerName of backup.affectedFollowers) {
-    const raw = await env.ASSASSIN_KV.get(assignKey(followerName));
-    const rec = JSON.parse(raw);
-    rec.following = backup.removedName;
-    await env.ASSASSIN_KV.put(assignKey(followerName), JSON.stringify(rec));
   }
 
   await putGame(env, {

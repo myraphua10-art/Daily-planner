@@ -14,9 +14,6 @@ import { onRequestPost as setImmunityPost } from "../functions/api/set-immunity.
 import { onRequestPost as adminProofsPost } from "../functions/api/admin-proofs.js";
 import { onRequestPost as setBirthdaysPost } from "../functions/api/set-birthdays.js";
 import { onRequestPost as updatePhotoPost } from "../functions/api/update-photo.js";
-import { onRequestPost as uploadPaparazziPost } from "../functions/api/upload-paparazzi.js";
-import { onRequestPost as adminPaparazziPost } from "../functions/api/admin-paparazzi.js";
-import { onRequestGet as adminPaparazziFileGet } from "../functions/api/admin-paparazzi-file.js";
 import { onRequestPost as removePlayerPost } from "../functions/api/remove-player.js";
 import { onRequestPost as undoRemovePlayerPost } from "../functions/api/undo-remove-player.js";
 import { onRequestPost as adminKillCodesPost } from "../functions/api/admin-kill-codes.js";
@@ -24,7 +21,6 @@ import { onRequestPost as adminBackfillKillCodesPost } from "../functions/api/ad
 import { onRequestGet as menuGet } from "../functions/api/menu.js";
 import { onRequestPost as submitMenuPost } from "../functions/api/submit-menu.js";
 import { onRequestPost as adminMenuPost } from "../functions/api/admin-menu.js";
-import { onRequestPost as setFilmOverridesPost } from "../functions/api/set-film-overrides.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -44,9 +40,6 @@ const routes = {
   "POST /api/admin-proofs": adminProofsPost,
   "POST /api/set-birthdays": setBirthdaysPost,
   "POST /api/update-photo": updatePhotoPost,
-  "POST /api/upload-paparazzi": uploadPaparazziPost,
-  "POST /api/admin-paparazzi": adminPaparazziPost,
-  "GET /api/admin-paparazzi-file": adminPaparazziFileGet,
   "POST /api/remove-player": removePlayerPost,
   "POST /api/undo-remove-player": undoRemovePlayerPost,
   "POST /api/admin-kill-codes": adminKillCodesPost,
@@ -54,7 +47,6 @@ const routes = {
   "GET /api/menu": menuGet,
   "POST /api/submit-menu": submitMenuPost,
   "POST /api/admin-menu": adminMenuPost,
-  "POST /api/set-film-overrides": setFilmOverridesPost,
 };
 
 export default {

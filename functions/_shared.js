@@ -63,13 +63,6 @@ export function proofKey(name) {
   return `proof:${slugify(name)}`;
 }
 
-// Paparazzi documentation photos, one per submission (an eliminated player
-// can submit many over time) - listed later via KV's prefix listing rather
-// than a hand-maintained index, so concurrent uploads can't race each other.
-export function paparazziKey(id) {
-  return `paparazzi:${id}`;
-}
-
 // Snapshot of everything /api/remove-player changed, so /api/undo-remove-player
 // can revert it - as long as nothing else has moved on in the meantime.
 export function removalBackupKey(name) {
@@ -80,21 +73,6 @@ export function removalBackupKey(name) {
 // exactly one current answer per person instead of a scrolling thread.
 export function menuKey(name) {
   return `menu:${slugify(name)}`;
-}
-
-// Decides who a newly-eliminated player has to film. A host-set override
-// (a personal pre-request, e.g. "if I die, make X the one I have to film")
-// wins as long as that person is still in the game (active or already won);
-// once that person is themselves eliminated, it falls back to the normal
-// rule of following whoever actually got you.
-export async function resolveFilming(env, game, eliminatedName, eliminatedBy) {
-  const overrideTarget = game?.filmOverrides?.[eliminatedName];
-  if (overrideTarget) {
-    const raw = await env.ASSASSIN_KV.get(assignKey(overrideTarget));
-    const rec = raw ? JSON.parse(raw) : null;
-    if (rec && rec.status !== "eliminated") return overrideTarget;
-  }
-  return eliminatedBy;
 }
 
 export const MENU_OPTIONS = [
@@ -109,16 +87,7 @@ export const MENU_OPTIONS = [
 // uploaded one yet) fresh each time, so it stays current as the chain shifts.
 export async function buildReveal(env, record, token) {
   if (record.status === "eliminated") {
-    // "following" is reassigned by /api/eliminate whenever the person they
-    // were following also goes out, so it's always whoever is currently
-    // still alive - read fresh rather than trusting a stale kill count.
-    let following = null;
-    if (record.following) {
-      const followingRaw = await env.ASSASSIN_KV.get(assignKey(record.following));
-      const followingRecord = followingRaw ? JSON.parse(followingRaw) : null;
-      following = { name: record.following, kills: followingRecord?.kills || 0 };
-    }
-    return { eliminated: true, eliminatedBy: record.eliminatedBy, following, claimToken: token };
+    return { eliminated: true, eliminatedBy: record.eliminatedBy, claimToken: token };
   }
   if (record.status === "won") {
     return { won: true, claimToken: token };

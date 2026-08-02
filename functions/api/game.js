@@ -17,7 +17,6 @@ export async function onRequestGet({ request, env }) {
       riggedTarget: game?.riggedTarget ?? "",
       riggedChain: game?.riggedChain ?? [],
       birthdays: game?.birthdays ?? {},
-      filmOverrides: game?.filmOverrides ?? {},
     });
   }
 

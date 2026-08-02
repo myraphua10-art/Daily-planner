@@ -37,10 +37,9 @@ export async function onRequestPost({ request, env }) {
 
   const others = game.players.filter((p) => p.toLowerCase() !== match.toLowerCase());
 
-  // Whoever should now be documented in the removed player's place: their
-  // own hunter if they were still active (that person is "continuing the
-  // story"), or whoever eliminated them if they'd already been caught.
-  let redirectFollowersTo = removedRecord.status === "eliminated" ? removedRecord.eliminatedBy : null;
+  // If the removed player was still active, whoever was hunting them
+  // silently inherits their target - the classic chain splice - so the loop
+  // stays intact. (An already-eliminated player has no live hunter to fix.)
   let affectedHunter = null;
 
   if (removedRecord.status === "active") {
@@ -51,27 +50,8 @@ export async function onRequestPost({ request, env }) {
       if (rec.status === "active" && rec.targetName?.toLowerCase() === match.toLowerCase()) {
         rec.targetName = removedRecord.targetName;
         await env.ASSASSIN_KV.put(assignKey(p), JSON.stringify(rec));
-        redirectFollowersTo = p;
         affectedHunter = p;
         break;
-      }
-    }
-  }
-
-  // Anyone documenting the removed player (because the removed player had
-  // eliminated them earlier, whether or not the removed player was ever
-  // caught themselves) gets pointed at redirectFollowersTo instead, so the
-  // chain isn't left dangling on someone who no longer exists.
-  const affectedFollowers = [];
-  if (redirectFollowersTo) {
-    for (const p of others) {
-      const raw = await env.ASSASSIN_KV.get(assignKey(p));
-      if (!raw) continue;
-      const rec = JSON.parse(raw);
-      if (rec.status === "eliminated" && rec.following?.toLowerCase() === match.toLowerCase()) {
-        rec.following = redirectFollowersTo;
-        await env.ASSASSIN_KV.put(assignKey(p), JSON.stringify(rec));
-        affectedFollowers.push(p);
       }
     }
   }
@@ -85,8 +65,6 @@ export async function onRequestPost({ request, env }) {
     removedName: match,
     removedRecord,
     affectedHunter,
-    redirectFollowersTo,
-    affectedFollowers,
     playersBefore: game.players,
     birthdaysBefore: game.birthdays || {},
     removedAt: Date.now(),

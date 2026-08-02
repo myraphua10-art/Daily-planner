@@ -90,12 +90,6 @@
     <button id="reshuffleBtn" class="danger">Reshuffle all pairings</button>
     <div id="reshuffleResult"></div>
 
-    <h2>Filming assignment overrides</h2>
-    <p class="sub">By default, whoever gets eliminated has to film whoever got them. To override that for specific people (e.g. two friends who want to film each other no matter who's out first), enter one "Name, Person they must film" per line. Only applies while that person is still in the game - once they're eliminated too, it falls back to the normal rule. Leave the second part blank to clear someone's override.</p>
-    <textarea id="filmOverridesInput" placeholder="Myra, Jayna&#10;Jayna, Myra"></textarea>
-    <button id="saveFilmOverridesBtn">Save overrides</button>
-    <div id="filmOverridesResult"></div>
-
     <h2>Reset a claim</h2>
     <p class="sub">If someone switches phones and loses access to their own reveal, type their exact name to let them claim it again on the new device. This does not show you their target.</p>
     <div class="row">
@@ -145,16 +139,6 @@
     </div>
     <button id="downloadProofsBtn" class="hidden" style="margin-top:8px;">Download selected</button>
 
-    <h2>Paparazzi documentation</h2>
-    <p class="sub">Once someone's eliminated, they're assigned to follow and document whoever got them. Every photo or video they submit shows up here - tick your favourites and download them. Videos show as a &#127909; placeholder until you download them.</p>
-    <button id="loadPaparazziBtn">Load documentation photos/videos</button>
-    <div id="paparazziGrid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px;"></div>
-    <div id="paparazziSelectRow" class="hidden" style="display:flex; gap:8px; margin-top:10px;">
-      <button id="paparazziSelectAllBtn" type="button" style="flex:1;">Select all</button>
-      <button id="paparazziSelectNoneBtn" type="button" style="flex:1;">Select none</button>
-    </div>
-    <button id="downloadPaparazziBtn" class="hidden" style="margin-top:8px;">Download selected</button>
-
     <h2>Immunity grant</h2>
     <p class="sub">Give one active player temporary protection - nobody can eliminate them while immune. You decide when to use this; the option is just ready here for when you do.</p>
     <div class="row">
@@ -200,7 +184,6 @@
     const statusArea = document.getElementById("statusArea");
     const playersInput = document.getElementById("playersInput");
     const birthdaysInput = document.getElementById("birthdaysInput");
-    const filmOverridesInput = document.getElementById("filmOverridesInput");
     const linkSection = document.getElementById("linkSection");
     const guestLink = document.getElementById("guestLink");
 
@@ -248,9 +231,6 @@
       playersInput.value = players.join("\n");
       birthdaysInput.value = players
         .map((name) => (game.birthdays?.[name] ? `${name}, ${game.birthdays[name]}` : name))
-        .join("\n");
-      filmOverridesInput.value = Object.entries(game.filmOverrides || {})
-        .map(([name, target]) => `${name}, ${target}`)
         .join("\n");
 
       if (game.locked) {
@@ -342,33 +322,6 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to reshuffle.");
         resultEl.innerHTML = `<div class="msg success">Reshuffled! ${data.count} new targets dealt. Tell everyone to re-open their page.</div>`;
-      } catch (e) {
-        resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
-      }
-    });
-
-    document.getElementById("saveFilmOverridesBtn").addEventListener("click", async () => {
-      const resultEl = document.getElementById("filmOverridesResult");
-      try {
-        const overrides = filmOverridesInput.value
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((line) => {
-            const [name, ...rest] = line.split(",");
-            return { name: (name || "").trim(), filmTarget: rest.join(",").trim() };
-          })
-          .filter((entry) => entry.name);
-
-        const res = await fetch("/api/set-film-overrides", {
-          method: "POST",
-          headers: adminHeaders({ "content-type": "application/json" }),
-          body: JSON.stringify({ overrides }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to save overrides.");
-        const errorNote = data.errors?.length ? ` (${data.errors.join("; ")})` : "";
-        resultEl.innerHTML = `<div class="msg ${data.errors?.length ? "error" : "success"}">Saved. ${data.count} override(s) active.${errorNote}</div>`;
       } catch (e) {
         resultEl.innerHTML = `<div class="msg error">${e.message}</div>`;
       }
@@ -489,7 +442,6 @@
 
     let loadedPhotos = [];
     let loadedProofs = [];
-    let loadedPaparazzi = [];
 
     function downloadDataUrl(dataUrl, filename) {
       const a = document.createElement("a");
@@ -507,17 +459,10 @@
       return ext;
     }
 
-    function extFromVideoKey(key) {
-      const m = /\.([a-zA-Z0-9]+)$/.exec(key);
-      return m ? m[1] : "mp4";
-    }
-
     // Photos are already sitting in the browser as data URIs once loaded, so
     // "downloading" just means triggering a save for each checked one - no
-    // extra server round-trip needed. Videos live in R2, not inline, so each
-    // one is fetched (with the admin header, since a plain <a href> can't
-    // send one) into a blob just before its own download triggers. A short
-    // delay between each keeps browsers from blocking a burst of downloads.
+    // extra server round-trip needed. A short delay between each keeps
+    // browsers from blocking a burst of downloads.
     async function downloadChecked(gridId, items, buttonEl) {
       const checks = document.querySelectorAll(`#${gridId} .photo-check:checked`);
       if (!checks.length) return;
@@ -529,21 +474,7 @@
         if (!item) continue;
         i++;
         buttonEl.textContent = `Downloading ${i} / ${checks.length}...`;
-        if (item.videoKey) {
-          try {
-            const res = await fetch(`/api/admin-paparazzi-file?key=${encodeURIComponent(item.videoKey)}`, {
-              headers: adminHeaders(),
-            });
-            const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            downloadDataUrl(blobUrl, `${item.name.replace(/\s+/g, "-")}.${extFromVideoKey(item.videoKey)}`);
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-          } catch (e) {
-            console.error(e);
-          }
-        } else {
-          downloadDataUrl(item.dataUrl, `${item.name.replace(/\s+/g, "-")}.${extFromDataUrl(item.dataUrl)}`);
-        }
+        downloadDataUrl(item.dataUrl, `${item.name.replace(/\s+/g, "-")}.${extFromDataUrl(item.dataUrl)}`);
         await new Promise((r) => setTimeout(r, 400));
       }
       buttonEl.textContent = originalText;
@@ -661,56 +592,6 @@
     document.getElementById("proofSelectNoneBtn").addEventListener("click", () => setAllChecked("proofGrid", false));
     document.getElementById("downloadProofsBtn").addEventListener("click", (e) => {
       downloadChecked("proofGrid", loadedProofs, e.currentTarget);
-    });
-
-    document.getElementById("loadPaparazziBtn").addEventListener("click", async () => {
-      const grid = document.getElementById("paparazziGrid");
-      const selectRow = document.getElementById("paparazziSelectRow");
-      const downloadBtn = document.getElementById("downloadPaparazziBtn");
-      grid.innerHTML = "";
-      selectRow.classList.add("hidden");
-      downloadBtn.classList.add("hidden");
-      try {
-        const res = await fetch("/api/admin-paparazzi", {
-          method: "POST",
-          headers: adminHeaders(),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to load documentation photos.");
-        if (!data.entries.length) {
-          grid.innerHTML = `<div class="msg info">No documentation photos yet.</div>`;
-          return;
-        }
-        loadedPaparazzi = data.entries.map((entry, i) =>
-          entry.videoKey
-            ? { name: `${entry.uploader}-documenting-${entry.subject}-${i}`, videoKey: entry.videoKey }
-            : { name: `${entry.uploader}-documenting-${entry.subject}-${i}`, dataUrl: entry.photoDataUrl }
-        );
-        grid.innerHTML = data.entries
-          .map((entry, i) => `
-            <div style="position:relative; text-align:center;">
-              <input type="checkbox" class="photo-check" data-index="${i}" style="position:absolute; top:6px; left:6px; width:18px; height:18px; z-index:2;">
-              ${
-                entry.videoKey
-                  ? `<div style="width:100%; aspect-ratio:1; border-radius:3px; border:1px solid var(--line); background:#efe9d8; display:flex; align-items:center; justify-content:center; font-size:28px;">&#127909;</div>`
-                  : `<img src="${entry.photoDataUrl}" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px; border:1px solid var(--line);">`
-              }
-              <div style="font-size:12px; margin-top:4px;">${entry.uploader} documenting ${entry.subject}</div>
-              <div style="font-size:10.5px; color:var(--sub);">${new Date(entry.submittedAt).toLocaleString()}</div>
-            </div>
-          `)
-          .join("");
-        selectRow.classList.remove("hidden");
-        downloadBtn.classList.remove("hidden");
-      } catch (e) {
-        grid.innerHTML = `<div class="msg error">${e.message}</div>`;
-      }
-    });
-
-    document.getElementById("paparazziSelectAllBtn").addEventListener("click", () => setAllChecked("paparazziGrid", true));
-    document.getElementById("paparazziSelectNoneBtn").addEventListener("click", () => setAllChecked("paparazziGrid", false));
-    document.getElementById("downloadPaparazziBtn").addEventListener("click", (e) => {
-      downloadChecked("paparazziGrid", loadedPaparazzi, e.currentTarget);
     });
 
     async function setImmunity(immune) {
