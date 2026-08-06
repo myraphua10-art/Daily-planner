@@ -1,7 +1,7 @@
 import { json, getGame, assignKey, requireAdmin } from "../_shared.js";
 
 // Admin only. Lists every player's kill code so the host can write it on
-// the back of their laminated photo. Doesn't reveal any pairing info -
+// the back of their velcro tag. Doesn't reveal any pairing info -
 // just each person's own code, independent of who's hunting whom.
 export async function onRequestPost({ request, env }) {
   if (!requireAdmin(request, env)) return json({ error: "Unauthorized" }, 401);

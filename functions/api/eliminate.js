@@ -6,7 +6,7 @@ import { json, getGame, assignKey, proofKey } from "../_shared.js";
 // Assassin chain. If that loops back to the caller themselves, they've won.
 // A proof photo of the catch is required (for the host to consider for
 // bonus gifts), and so is the kill code written on the back of the target's
-// laminated photo - ripping it off and reading the code back is what
+// velcro tag - ripping it off and reading the code back is what
 // actually proves the catch, not just the hunter's say-so.
 export async function onRequestPost({ request, env }) {
   const body = await request.json();

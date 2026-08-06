@@ -1,6 +1,6 @@
 // Pure, framework-free game logic. No Firebase here so it can be unit-tested with plain Node.
 
-// Short, hand-writable code for the back of each laminated photo, built by
+// Short, hand-writable code for the back of each velcro tag, built by
 // taking the player's own name and swapping out a few of its letters for
 // random digits - same length as the name, close enough to still look like
 // it, cryptic enough not to read as an exact match at a glance. All caps.
