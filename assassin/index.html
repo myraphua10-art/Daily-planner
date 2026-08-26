@@ -91,6 +91,7 @@
     transition:opacity .3s, transform .3s; max-width:88vw; text-align:center; z-index:50; pointer-events:none;
   }
   .leader-toast.shown{opacity:1; transform:translateX(-50%) translateY(0);}
+  .leader-toast.death{background:#5a0f0d; color:#f6e9e6; letter-spacing:.01em;}
   button.text-btn{
     background:transparent; border:none; color:var(--sub); margin-top:10px;
     font-weight:600; font-size:13px; letter-spacing:normal; text-transform:none; box-shadow:none;
@@ -300,12 +301,34 @@
       }
     }
 
+    // Names already known to be out, so a death only pops once - and so
+    // opening the page mid-game doesn't spam a toast for every earlier kill.
+    // null until the first poll seeds it silently.
+    let seenEliminated = null;
+
     async function renderLeaderboard() {
       const result = await fetchLeaderboard();
       if (!result) {
         leaderboardArea.classList.add("hidden");
         return;
       }
+
+      const eliminatedNow = new Set(
+        result.sorted.filter((p) => p.status === "eliminated").map((p) => p.name)
+      );
+      if (seenEliminated === null) {
+        seenEliminated = eliminatedNow;
+      } else {
+        for (const p of result.sorted) {
+          if (p.status !== "eliminated" || seenEliminated.has(p.name)) continue;
+          // Your own death is already handled by the reveal screen - no toast.
+          if (currentName && p.name.toLowerCase() === currentName.toLowerCase()) continue;
+          const by = p.eliminatedBy ? ` by ${p.eliminatedBy}` : "";
+          enqueueToast(`☠️ ${p.name} has been eliminated${by}.`, "death");
+        }
+        seenEliminated = eliminatedNow;
+      }
+
       leaderboardList.innerHTML = result.sorted
         .map(
           (p, i) => `
@@ -319,14 +342,38 @@
       leaderboardArea.classList.remove("hidden");
     }
 
-    function showLeaderToast(text) {
-      leaderToast.textContent = text;
+    // One toast at a time. Deaths and leader announcements both queue here so
+    // they never clobber each other, and a burst of kills shows one by one.
+    const toastQueue = [];
+    let toastShowing = false;
+
+    function enqueueToast(text, variant) {
+      toastQueue.push({ text, variant });
+      if (!toastShowing) drainToasts();
+    }
+
+    function drainToasts() {
+      const next = toastQueue.shift();
+      if (!next) {
+        toastShowing = false;
+        return;
+      }
+      toastShowing = true;
+      leaderToast.textContent = next.text;
+      leaderToast.classList.toggle("death", next.variant === "death");
       leaderToast.classList.remove("hidden");
       requestAnimationFrame(() => leaderToast.classList.add("shown"));
       setTimeout(() => {
         leaderToast.classList.remove("shown");
-        setTimeout(() => leaderToast.classList.add("hidden"), 300);
-      }, 6000);
+        setTimeout(() => {
+          leaderToast.classList.add("hidden");
+          drainToasts();
+        }, 350);
+      }, 5000);
+    }
+
+    function showLeaderToast(text) {
+      enqueueToast(text);
     }
 
     async function announceLeader() {
