@@ -332,7 +332,7 @@
           // Your own death is already handled by the reveal screen - no toast.
           if (currentName && p.name.toLowerCase() === currentName.toLowerCase()) continue;
           const by = p.eliminatedBy ? ` by ${p.eliminatedBy}` : "";
-          enqueueToast(`☠️ ${p.name} has been eliminated${by}.`, "death");
+          enqueueToast(`${p.name} has been eliminated${by}.`, "death");
         }
         seenEliminated = eliminatedNow;
       }
