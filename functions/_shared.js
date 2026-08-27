@@ -85,17 +85,55 @@ export const MENU_OPTIONS = [
 // Shared shape for a hunter's reveal, whether they just claimed their name
 // or are revisiting. Looks up the current target's photo (if that person has
 // uploaded one yet) fresh each time, so it stays current as the chain shifts.
-export async function buildReveal(env, record, token) {
+export async function buildReveal(env, record, token, name) {
   if (record.status === "eliminated") {
-    return { eliminated: true, eliminatedBy: record.eliminatedBy, claimToken: token };
+    return {
+      eliminated: true,
+      eliminatedBy: record.eliminatedBy,
+      recruitedBy: record.recruitedBy || null,
+      claimToken: token,
+    };
   }
+
+  // A living hunter may recruit ONE person they've personally eliminated.
+  // Both the current recruit and the still-available candidates are things
+  // this player already knows (they made those kills), so returning them
+  // leaks nothing about anyone else's pairing.
+  const recruitInfo = await buildRecruitInfo(env, record, name);
+
   if (record.status === "won") {
-    return { won: true, claimToken: token };
+    return { won: true, ...recruitInfo, claimToken: token };
   }
   const targetPhoto = await env.ASSASSIN_KV.get(photoKey(record.targetName));
   return {
     targetName: record.targetName,
     targetPhoto: targetPhoto || null,
+    ...recruitInfo,
     claimToken: token,
   };
+}
+
+// { recruit, recruitable } for a living player: who they've already taken
+// onto their team (at most one, ever) and which of their own victims are
+// still free to be recruited.
+export async function buildRecruitInfo(env, record, name) {
+  if (!name) return { recruit: record.recruit || null, recruitable: [] };
+  if (record.recruit) return { recruit: record.recruit, recruitable: [] };
+
+  const game = await getGame(env);
+  const others = (game?.players || []).filter((p) => p.toLowerCase() !== name.toLowerCase());
+  const recruitable = [];
+  for (const p of others) {
+    const raw = await env.ASSASSIN_KV.get(assignKey(p));
+    if (!raw) continue;
+    const rec = JSON.parse(raw);
+    if (
+      rec.status === "eliminated" &&
+      rec.eliminatedBy?.toLowerCase() === name.toLowerCase() &&
+      !rec.recruitedBy
+    ) {
+      recruitable.push(p);
+    }
+  }
+  return { recruit: null, recruitable };
 }

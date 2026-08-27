@@ -44,6 +44,8 @@
   li.eliminated .pname{color:var(--sub); text-decoration:line-through;}
   .elim-note{font-size:12px; color:var(--sub); font-style:italic; margin-top:2px;}
   .kill-count{font-size:12px; color:var(--sub); margin-top:2px;}
+  .team-note{font-size:12px; color:var(--gold); margin-top:2px; font-style:italic;}
+  .team-note.fallen{color:var(--sub); text-decoration:line-through;}
   .msg{font-size:14px; padding:12px 14px; border-radius:3px; border:1px solid var(--line); background:#f1efe4; color:#544f3f; text-align:center;}
   .refresh{
     display:block; width:100%; margin-top:22px; padding:12px; border-radius:3px; border:1px solid var(--accent);
@@ -86,22 +88,38 @@
         const activeCount = data.players.filter((p) => p.status !== "eliminated").length;
         const winner = data.players.find((p) => p.status === "won");
 
+        // A recruit only stands as long as their recruiter does - once the
+        // recruiter is out, the whole team falls.
+        const statusOf = Object.fromEntries(data.players.map((p) => [p.name, p.status]));
+
         const rows = data.players
           .slice()
           .sort((a, b) => {
             const order = { won: 0, active: 1, eliminated: 2 };
             return order[a.status] - order[b.status] || a.name.localeCompare(b.name);
           })
-          .map((p) => `
+          .map((p) => {
+            let teamNote = "";
+            if (p.recruitedBy) {
+              const leaderOut = statusOf[p.recruitedBy] === "eliminated";
+              teamNote = leaderOut
+                ? `<div class="team-note fallen">fell with ${p.recruitedBy}</div>`
+                : `<div class="team-note">on ${p.recruitedBy}'s team</div>`;
+            } else if (p.recruit) {
+              teamNote = `<div class="team-note">${p.recruit} on their team</div>`;
+            }
+            return `
             <li class="${p.status}">
               <div>
                 <div class="pname">${p.name}</div>
                 ${p.eliminatedBy ? `<div class="elim-note">eliminated by ${p.eliminatedBy}</div>` : ""}
+                ${teamNote}
                 <div class="kill-count">${p.kills} kill${p.kills === 1 ? "" : "s"}</div>
               </div>
               <div>${statusBadge(p)}${p.immune ? `<span class="badge immune">Immune</span>` : ""}</div>
             </li>
-          `)
+          `;
+          })
           .join("");
 
         content.innerHTML = `

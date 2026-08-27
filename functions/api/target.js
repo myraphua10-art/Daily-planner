@@ -38,7 +38,7 @@ export async function onRequestGet({ request, env }) {
 
   const providedToken = request.headers.get("x-claim-token") || "";
   if (providedToken === record.ownerToken) {
-    const reveal = await buildReveal(env, record, record.ownerToken);
+    const reveal = await buildReveal(env, record, record.ownerToken, name);
     return json(reveal);
   }
 

@@ -6,6 +6,7 @@ import { onRequestGet as targetGet } from "../functions/api/target.js";
 import { onRequestPost as resetPost } from "../functions/api/reset.js";
 import { onRequestPost as adminCheckPost } from "../functions/api/admin-check.js";
 import { onRequestPost as eliminatePost } from "../functions/api/eliminate.js";
+import { onRequestPost as recruitPost } from "../functions/api/recruit.js";
 import { onRequestPost as claimPost } from "../functions/api/claim.js";
 import { onRequestPost as undoEliminatePost } from "../functions/api/undo-eliminate.js";
 import { onRequestGet as statusGet } from "../functions/api/status.js";
@@ -32,6 +33,7 @@ const routes = {
   "POST /api/reset": resetPost,
   "POST /api/admin-check": adminCheckPost,
   "POST /api/eliminate": eliminatePost,
+  "POST /api/recruit": recruitPost,
   "POST /api/claim": claimPost,
   "POST /api/undo-eliminate": undoEliminatePost,
   "GET /api/status": statusGet,

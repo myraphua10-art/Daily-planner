@@ -19,6 +19,10 @@ export async function onRequestGet({ env }) {
         kills: record.kills || 0,
         eliminatedBy: record.status === "eliminated" ? record.eliminatedBy : undefined,
         immune: record.status === "active" ? Boolean(record.immune) : undefined,
+        // Team info is public: who someone was taken onto the team by, and
+        // who (if anyone) they've recruited. Neither reveals a live pairing.
+        recruitedBy: record.recruitedBy || undefined,
+        recruit: record.recruit || undefined,
       };
     })
   );

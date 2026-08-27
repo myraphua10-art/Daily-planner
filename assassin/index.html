@@ -99,6 +99,13 @@
   }
   .leader-toast.shown{opacity:1; transform:translateX(-50%) translateY(0);}
   .leader-toast.death{background:#5a0f0d; color:#f6e9e6; letter-spacing:.01em;}
+  .recruit-note{
+    text-align:center; font-size:13.5px; color:#544f3f; background:#f6efe0; border:1px solid #e3cfa1;
+    border-radius:3px; padding:10px 12px; margin-top:12px; line-height:1.5;
+  }
+  .recruit-note b{color:var(--gold); font-family:"Playfair Display", Georgia, serif; font-style:italic;}
+  #recruitPicker{margin-top:16px;}
+  .recruit-hint{font-size:12.5px; color:var(--sub); line-height:1.55; margin:0 0 10px; text-align:center;}
   button.text-btn{
     background:transparent; border:none; color:var(--sub); margin-top:10px;
     font-weight:600; font-size:13px; letter-spacing:normal; text-transform:none; box-shadow:none;
@@ -142,6 +149,16 @@
       <img id="dossierPhoto" class="dossier-photo hidden" alt="">
       <div class="target" id="revealText">-</div>
       <div class="target-sub hidden" id="revealSub"></div>
+    </div>
+
+    <div id="recruitArea" class="recruit-note hidden"></div>
+
+    <div id="recruitPicker" class="hidden">
+      <p class="section-label">Recruit to your team</p>
+      <p class="recruit-hint">You may take <b>one</b> person you've eliminated onto your team &mdash; only ever one. They can help you hunt, but can never snatch a tag. If you go down, they go with you.</p>
+      <select id="recruitSelect"></select>
+      <button id="recruitBtn">Recruit them</button>
+      <button id="cancelRecruitBtn" class="secondary">Not yet</button>
     </div>
 
     <button id="killBtn" class="kill-btn hidden">I Got Them</button>
@@ -208,6 +225,11 @@
     const revealText = document.getElementById("revealText");
     const revealSub = document.getElementById("revealSub");
     const dossierPhoto = document.getElementById("dossierPhoto");
+    const recruitArea = document.getElementById("recruitArea");
+    const recruitPicker = document.getElementById("recruitPicker");
+    const recruitSelect = document.getElementById("recruitSelect");
+    const recruitBtn = document.getElementById("recruitBtn");
+    const cancelRecruitBtn = document.getElementById("cancelRecruitBtn");
     const killBtn = document.getElementById("killBtn");
     const changePhotoBtn = document.getElementById("changePhotoBtn");
     const changePhotoInput = document.getElementById("changePhotoInput");
@@ -241,6 +263,35 @@
       msgArea.innerHTML = `<div class="msg ${type}">${text}</div>`;
     }
 
+    // Team status + the "pick one of your victims" offer. Both sides of the
+    // alliance see it: the recruiter sees who's on their team, the recruit
+    // sees whose team they're on.
+    function renderRecruit(result) {
+      recruitArea.classList.add("hidden");
+      recruitPicker.classList.add("hidden");
+
+      if (result.eliminated) {
+        if (result.recruitedBy) {
+          recruitArea.innerHTML = `You were recruited by <b>${result.recruitedBy}</b>. Help them however you can &mdash; but you can never snatch a tag, and if they go down, you're out with them.`;
+          recruitArea.classList.remove("hidden");
+        }
+        return;
+      }
+
+      if (result.recruit) {
+        recruitArea.innerHTML = `<b>${result.recruit}</b> is on your team. That's your one recruit.`;
+        recruitArea.classList.remove("hidden");
+        return;
+      }
+
+      if (result.recruitable?.length) {
+        recruitSelect.innerHTML = result.recruitable
+          .map((n) => `<option value="${n}">${n}</option>`)
+          .join("");
+        recruitPicker.classList.remove("hidden");
+      }
+    }
+
     function renderResult(result) {
       introText.classList.add("hidden");
       pickArea.classList.add("hidden");
@@ -250,6 +301,7 @@
       revealArea.classList.remove("eliminated", "won");
       changePhotoBtn.classList.remove("hidden");
       revealSub.classList.add("hidden");
+      renderRecruit(result);
 
       if (result.eliminated) {
         currentStatus = "eliminated";
@@ -555,6 +607,37 @@
           console.error(e);
           showMessage("Something went wrong. Try again in a moment.", "error");
           submitPhotoBtn.disabled = false;
+        }
+      });
+
+      cancelRecruitBtn.addEventListener("click", () => {
+        recruitPicker.classList.add("hidden");
+      });
+
+      recruitBtn.addEventListener("click", async () => {
+        const pick = recruitSelect.value;
+        if (!pick) return;
+        if (!confirm(`Recruit ${pick} onto your team? You only ever get one recruit - this can't be undone.`)) return;
+        recruitBtn.disabled = true;
+        try {
+          const res = await fetch("/api/recruit", {
+            method: "POST",
+            headers: { "x-claim-token": currentToken, "content-type": "application/json" },
+            body: JSON.stringify({ name: currentName, recruit: pick }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            showMessage(data.error || "Something went wrong.", "error");
+            return;
+          }
+          showMessage(`${data.recruit} is on your team.`, "info");
+          const refreshed = await fetchTarget(currentName, currentToken);
+          renderResult(refreshed);
+        } catch (e) {
+          console.error(e);
+          showMessage("Something went wrong. Try again in a moment.", "error");
+        } finally {
+          recruitBtn.disabled = false;
         }
       });
 

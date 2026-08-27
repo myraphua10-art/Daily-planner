@@ -46,6 +46,6 @@ export async function onRequestPost({ request, env }) {
   await env.ASSASSIN_KV.put(key, JSON.stringify(record));
   await env.ASSASSIN_KV.put(photoKey(match), photoDataUrl);
 
-  const reveal = await buildReveal(env, record, token);
+  const reveal = await buildReveal(env, record, token, match);
   return json(reveal);
 }
