@@ -125,6 +125,46 @@
   .topic-row.done span{text-decoration:line-through; color:var(--sub);}
   .note{font-size:12px; color:var(--sub); background:#f8f9fd; border-radius:10px; padding:10px 14px; margin-top:6px;}
 
+  /* ===== My Entries (manual input) ===== */
+  .seg{display:flex; gap:6px; background:#f0f1fa; padding:4px; border-radius:13px; margin-bottom:16px;}
+  .seg button{
+    flex:1; border:none; background:none; font:inherit; font-size:13px; font-weight:600;
+    padding:10px 6px; border-radius:10px; cursor:pointer; color:var(--sub);
+  }
+  .seg button.active{background:#fff; color:var(--accent); box-shadow:0 1px 5px rgba(30,30,60,.12);}
+  .form-row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:13px;}
+  .field{flex:1; min-width:150px; display:flex; flex-direction:column; gap:6px;}
+  .field label{font-size:11px; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em;}
+  .field input, .field textarea{
+    font:inherit; font-size:15px; padding:11px 13px; border:1px solid var(--line); border-radius:11px;
+    background:#fbfbfe; color:var(--ink); width:100%; -webkit-appearance:none; appearance:none;
+  }
+  .field input:focus, .field textarea:focus{outline:none; border-color:var(--accent); background:#fff;}
+  .field textarea{min-height:62px; resize:vertical;}
+  .btn{
+    font:inherit; font-size:14.5px; font-weight:600; padding:12px 20px; border-radius:12px; border:none;
+    cursor:pointer; background:var(--accent); color:#fff;
+  }
+  .btn:active{opacity:.85;}
+  .btn.ghost{background:#f0f1fa; color:var(--ink);}
+  .btn.small{font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:9px;}
+  .btn.danger{background:#fee2e2; color:#991b1b;}
+  .form-err{font-size:12.5px; color:#b91c1c; margin-top:2px;}
+  .entry{display:flex; gap:12px; align-items:flex-start; padding:13px 0; border-bottom:1px solid var(--line);}
+  .entry:last-child{border-bottom:none; padding-bottom:0;}
+  .entry .grow{flex:1; min-width:0;}
+  .entry h4{margin:0 0 3px; font-size:14.5px; display:flex; align-items:center; gap:8px;}
+  .entry .meta{font-size:12px; color:var(--sub);}
+  .entry-actions{display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;}
+  .entry.gone{opacity:.42;}
+  .empty{font-size:13px; color:var(--sub); padding:4px 0;}
+  details.builtins summary{
+    cursor:pointer; font-size:14px; font-weight:600; padding:2px 0; list-style:none;
+  }
+  details.builtins summary::-webkit-details-marker{display:none;}
+  details.builtins summary::before{content:'▸ '; color:var(--sub);}
+  details.builtins[open] summary::before{content:'▾ ';}
+
   /* ===== Mobile breakpoint ===== */
   @media (max-width:880px){
     nav.sidebar{display:none;}
@@ -147,6 +187,7 @@
     <button data-tab="exams"><span class="ic">🎯</span> Exam Calendar</button>
     <button data-tab="week"><span class="ic">🗓️</span> Weekly Free-Time Map</button>
     <button data-tab="topics"><span class="ic">✅</span> Topic Tracker</button>
+    <button data-tab="mine"><span class="ic">➕</span> My Entries</button>
   </nav>
 
   <main>
@@ -164,6 +205,7 @@
     <section id="tab-exams" style="display:none"></section>
     <section id="tab-week" style="display:none"></section>
     <section id="tab-topics" style="display:none"></section>
+    <section id="tab-mine" style="display:none"></section>
   </main>
 
   <nav class="tabbar">
@@ -171,6 +213,7 @@
     <button data-tab="exams"><span class="ic">🎯</span>Exams</button>
     <button data-tab="week"><span class="ic">🗓️</span>Week Map</button>
     <button data-tab="topics"><span class="ic">✅</span>Topics</button>
+    <button data-tab="mine"><span class="ic">➕</span>Add</button>
   </nav>
 </div>
 
@@ -379,8 +422,72 @@ function studyBlocksFor(weekday, parity){
 }
 const WEEKDAY_LABEL = {mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday'};
 
+// ---- Manually added entries ----
+// Anything typed into the "My Entries" tab lives in this browser's localStorage —
+// it is never sent anywhere, and it does not follow you to another device.
+// Custom exams are merged into the calendar/countdown; custom events and
+// reminders show up on their date in the day view.
+const CUSTOM_KEY = 'planner-custom-v1';
+const HIDDEN_KEY = 'planner-hidden-builtin-v1';
+
+function readList(key){
+  try{ const a = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(a) ? a : []; }
+  catch(err){ return []; }
+}
+function writeList(key, list){
+  try{ localStorage.setItem(key, JSON.stringify(list)); }
+  catch(err){ alert('Could not save — this browser is out of storage space.'); }
+}
+const loadCustom = ()=> readList(CUSTOM_KEY);
+const saveCustom = (l)=> writeList(CUSTOM_KEY, l);
+const loadHidden = ()=> readList(HIDDEN_KEY);
+const saveHidden = (l)=> writeList(HIDDEN_KEY, l);
+
+// Built-in exams are identified by their content, not an index, so hiding one
+// keeps working if the timetable above is edited later.
+const builtinKey = (e)=> `${e.subject}|${e.code}|${e.date}`;
+
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Subjects Myra adds herself won't be in SUBJECT_COLORS, so give them a stable
+// colour derived from the name rather than a random one on every render.
+const EXTRA_COLORS = ['#6366f1','#0ea5e9','#f97316','#a855f7','#22c55e','#e11d48','#0d9488','#7c3aed'];
+function colorFor(subject){
+  if(SUBJECT_COLORS[subject]) return SUBJECT_COLORS[subject];
+  let h = 0;
+  for(let i=0;i<subject.length;i++) h = (h*31 + subject.charCodeAt(i)) >>> 0;
+  return EXTRA_COLORS[h % EXTRA_COLORS.length];
+}
+
+function customExams(){
+  return loadCustom().filter(x=>x.kind==='exam' && x.date).map(x=>({
+    subject: esc(x.title) || 'Exam',
+    code: esc(x.code) || 'Paper',
+    date: x.date,
+    estimated: false,
+    weight: (x.weight===''||x.weight==null) ? null : Number(x.weight),
+    weightLabel: 'added by you',
+    topics: (x.topics||[]).map(esc).concat(x.detail?[esc(x.detail)]:[]),
+    custom: true,
+  }));
+}
+function allExams(){
+  const hidden = loadHidden();
+  return EXAMS.filter(e=>!hidden.includes(builtinKey(e))).concat(customExams());
+}
+function eventsFor(dateStr){
+  const out = (EVENTS[dateStr]||[]).slice();
+  loadCustom().filter(x=>x.kind!=='exam' && x.date===dateStr).forEach(x=>{
+    const head = [x.kind==='event'?'📌':'📝', x.time||'', esc(x.title)].filter(Boolean).join(' ');
+    out.push(head + (x.detail?` — ${esc(x.detail)}`:''));
+  });
+  return out;
+}
+
 function nextExam(){
-  const upcoming = EXAMS.filter(e=>daysUntil(e.date)>=0).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const upcoming = allExams().filter(e=>daysUntil(e.date)>=0).sort((a,b)=>new Date(a.date)-new Date(b.date));
   return upcoming[0] || EXAMS[EXAMS.length-1];
 }
 
@@ -401,7 +508,7 @@ function renderCountdown(){
 function renderExams(){
   // Exams drop off this list the day after they happen — only today's and
   // future papers are shown, so the calendar always reads as a to-do list.
-  const sorted = EXAMS.filter(e=>daysUntil(e.date)>=0).sort((a,b)=> new Date(a.date)-new Date(b.date));
+  const sorted = allExams().filter(e=>daysUntil(e.date)>=0).sort((a,b)=> new Date(a.date)-new Date(b.date));
   const el = document.getElementById('tab-exams');
   if(!sorted.length){
     el.innerHTML = '<h2 class="section-title">🎯 Master Exam Calendar</h2>'
@@ -413,10 +520,10 @@ function renderExams(){
     const dColor = d<=7 ? '#fee2e2' : d<=21 ? '#fef3c7' : '#e0f2fe';
     const dText = d<=7 ? '#991b1b' : d<=21 ? '#92400e' : '#0369a1';
     return `<div class="card exam-card">
-      <div class="exam-dot" style="background:${SUBJECT_COLORS[e.subject]}"></div>
+      <div class="exam-dot" style="background:${colorFor(e.subject)}"></div>
       <div style="flex:1; min-width:0">
-        <h3>${e.subject} <span style="color:${SUBJECT_COLORS[e.subject]}">· ${e.code}</span></h3>
-        <span class="badge ${e.estimated?'estimated':'confirmed'}">${e.estimated?'estimated date':'confirmed date'}</span>
+        <h3>${e.subject} <span style="color:${colorFor(e.subject)}">· ${e.code}</span></h3>
+        <span class="badge ${e.estimated?'estimated':'confirmed'}">${e.custom?'added by you':e.estimated?'estimated date':'confirmed date'}</span>
         <div class="exam-meta" style="margin-top:6px">${fmtDate(e.date)} &nbsp;·&nbsp; ${e.weight!=null?`<span class="weight">${e.weight}%</span> of subject grade`:e.weightLabel}</div>
         <div>${e.topics.map(t=>`<span class="chip">${t}</span>`).join('')}</div>
       </div>
@@ -464,7 +571,7 @@ function buildDayTimeline(dateStr){
   const weekday = wdMap[wdIdx];
   const parity = parityOf(dateStr);
   // More than one paper can land on the same day (History + InA on 2 Oct).
-  const examsToday = EXAMS.filter(e=>e.date===dateStr);
+  const examsToday = allExams().filter(e=>e.date===dateStr);
   const override = DATE_OVERRIDES[dateStr];
 
   if(wdIdx===6){ // Saturday — open study day
@@ -590,8 +697,9 @@ function renderToday(dateStr){
   if(data.override){
     header += `<div class="card" style="background:#fff7ed; border:1px solid #fed7aa;"><strong>⚠️ Schedule swap:</strong> ${data.override.note}</div>`;
   }
-  if(EVENTS[dateStr]){
-    header += `<div class="card" style="background:#fdf4ff; border:1px solid #f0abfc;">${EVENTS[dateStr].map(e=>`<div>${e}</div>`).join('')}</div>`;
+  const dayEvents = eventsFor(dateStr);
+  if(dayEvents.length){
+    header += `<div class="card" style="background:#fdf4ff; border:1px solid #f0abfc;">${dayEvents.map(e=>`<div>${e}</div>`).join('')}</div>`;
   }
   const wdIdxToday = new Date(dateStr+'T00:00:00').getDay();
   const isPersonalDay = PERSONAL_DATES.includes(dateStr) || wdIdxToday===5 || wdIdxToday===0 || (wdIdxToday===1 && data.parity==='odd');
@@ -651,6 +759,244 @@ function renderTopics(){
   }
 }
 
+// ---- My Entries tab ----
+const KIND_META = {
+  exam:  {icon:'🎯', label:'Exam',     noun:'exam'},
+  event: {icon:'📌', label:'Event',    noun:'event'},
+  note:  {icon:'📝', label:'Reminder', noun:'reminder'},
+};
+const BLANK_ENTRY = {kind:'exam', id:null, title:'', code:'', date:'', time:'', weight:'', topics:'', detail:''};
+let entryForm = {...BLANK_ENTRY};
+let entryError = '';
+let builtinsOpen = false;  // kept across re-renders so hiding an exam doesn't collapse the list
+
+function refreshEverything(){
+  renderCountdown();
+  renderExams();
+  renderToday(currentDate);
+  renderMine();
+}
+
+function entryFormHtml(){
+  const f = entryForm;
+  const seg = Object.entries(KIND_META).map(([k,m])=>
+    `<button type="button" data-kind="${k}" class="${f.kind===k?'active':''}">${m.icon} ${m.label}</button>`
+  ).join('');
+
+  let fields = '';
+  if(f.kind==='exam'){
+    fields = `
+      <div class="form-row">
+        <div class="field"><label for="fTitle">Subject</label>
+          <input id="fTitle" value="${esc(f.title)}" placeholder="e.g. Biology"></div>
+        <div class="field"><label for="fCode">Paper / type</label>
+          <input id="fCode" value="${esc(f.code)}" placeholder="e.g. EYA, CBA2, practical"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="fDate">Date</label>
+          <input id="fDate" type="date" value="${esc(f.date)}"></div>
+        <div class="field"><label for="fWeight">Weighting % (optional)</label>
+          <input id="fWeight" type="number" min="0" max="100" value="${esc(f.weight)}" placeholder="e.g. 55"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="fTopics">Topics (optional, separate with commas)</label>
+          <input id="fTopics" value="${esc(f.topics)}" placeholder="Cells, Genetics, Ecology"></div>
+      </div>`;
+  } else if(f.kind==='event'){
+    fields = `
+      <div class="form-row">
+        <div class="field"><label for="fTitle">What's happening</label>
+          <input id="fTitle" value="${esc(f.title)}" placeholder="e.g. Swim meet, dentist, Ella's party"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="fDate">Date</label>
+          <input id="fDate" type="date" value="${esc(f.date)}"></div>
+        <div class="field"><label for="fTime">Time (optional)</label>
+          <input id="fTime" type="time" value="${esc(f.time)}"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="fDetail">Notes (optional)</label>
+          <textarea id="fDetail" placeholder="Anything you want to remember">${esc(f.detail)}</textarea></div>
+      </div>`;
+  } else {
+    fields = `
+      <div class="form-row">
+        <div class="field"><label for="fTitle">Reminder</label>
+          <input id="fTitle" value="${esc(f.title)}" placeholder="e.g. Hand in Chem practical write-up"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="fDate">Date (optional — leave blank to just keep it on this list)</label>
+          <input id="fDate" type="date" value="${esc(f.date)}"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="fDetail">Notes (optional)</label>
+          <textarea id="fDetail" placeholder="Any details">${esc(f.detail)}</textarea></div>
+      </div>`;
+  }
+
+  return `<div class="card">
+    <h3 style="margin:0 0 12px; font-size:16px">${f.id ? '✏️ Edit entry' : '➕ Add something'}</h3>
+    <div class="seg">${seg}</div>
+    ${fields}
+    ${entryError ? `<div class="form-err">${esc(entryError)}</div>` : ''}
+    <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap">
+      <button class="btn" id="saveEntry">${f.id ? 'Save changes' : 'Add to planner'}</button>
+      ${f.id ? '<button class="btn ghost" id="cancelEntry">Cancel</button>' : ''}
+    </div>
+  </div>`;
+}
+
+function entryListHtml(){
+  const items = loadCustom().slice().sort((a,b)=>{
+    if(!a.date) return 1;
+    if(!b.date) return -1;
+    return a.date.localeCompare(b.date);
+  });
+  if(!items.length){
+    return `<div class="card"><h3 style="margin:0 0 6px; font-size:16px">Your entries</h3>
+      <div class="empty">Nothing added yet. Anything you add above shows up here, and on the right day in Today's Plan.</div></div>`;
+  }
+  const rows = items.map(x=>{
+    const m = KIND_META[x.kind] || KIND_META.note;
+    const past = x.date && daysUntil(x.date) < 0;
+    const when = x.date
+      ? `${fmtDateShort(x.date)}${x.time?` · ${x.time}`:''}${past?' · done':` · in ${daysUntil(x.date)}d`}`
+      : 'no date';
+    const extra = [
+      x.kind==='exam' && x.code ? esc(x.code) : '',
+      x.kind==='exam' && x.weight!=='' && x.weight!=null ? `${esc(x.weight)}%` : '',
+      x.detail ? esc(x.detail) : '',
+      (x.topics||[]).length ? (x.topics||[]).map(esc).join(', ') : '',
+    ].filter(Boolean).join(' · ');
+    return `<div class="entry ${past?'gone':''}">
+      <div class="grow">
+        <h4>${m.icon} ${esc(x.title)}</h4>
+        <div class="meta">${when}${extra?` · ${extra}`:''}</div>
+      </div>
+      <div class="entry-actions">
+        <button class="btn ghost small" data-edit="${esc(x.id)}">Edit</button>
+        <button class="btn danger small" data-del="${esc(x.id)}">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="card"><h3 style="margin:0 0 4px; font-size:16px">Your entries</h3>${rows}</div>`;
+}
+
+function builtinListHtml(){
+  const hidden = loadHidden();
+  // Only the ones still to come — sat papers are gone from the rest of the app
+  // and there's nothing useful left to do with them here either.
+  const upcoming = EXAMS.filter(e=>daysUntil(e.date)>=0).sort((a,b)=>a.date.localeCompare(b.date));
+  const rows = upcoming.map(e=>{
+    const k = builtinKey(e);
+    const isHidden = hidden.includes(k);
+    return `<div class="entry ${isHidden?'gone':''}">
+      <div class="grow">
+        <h4><span class="subject-dot" style="background:${colorFor(e.subject)}"></span>${e.subject} · ${e.code}</h4>
+        <div class="meta">${fmtDateShort(e.date)}${isHidden?' · hidden':''}</div>
+      </div>
+      <div class="entry-actions">
+        <button class="btn ghost small" data-toggle="${esc(k)}">${isHidden?'Show':'Hide'}</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="card"><details class="builtins" ${builtinsOpen?'open':''}>
+    <summary>School exams already in the app (${upcoming.length})</summary>
+    <div class="note" style="margin:10px 0 4px">Hide anything that's been cancelled or has the wrong date, then add your own version above. Hiding never deletes it — you can bring it back here any time.</div>
+    ${rows}
+  </details></div>`;
+}
+
+function renderMine(){
+  const el = document.getElementById('tab-mine');
+  el.innerHTML = '<h2 class="section-title">➕ My Entries</h2>'
+    + entryFormHtml()
+    + entryListHtml()
+    + builtinListHtml()
+    + `<div class="note">Everything here is saved on this device only, in this browser. It isn't sent anywhere — but it also won't appear if you open the planner on a different phone or laptop, and clearing your browser data will wipe it.</div>`;
+
+  const det = el.querySelector('details.builtins');
+  if(det) det.addEventListener('toggle', ()=>{ builtinsOpen = det.open; });
+
+  el.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click', ()=>{
+    readFormInputs();
+    entryForm.kind = b.dataset.kind;
+    entryError = '';
+    renderMine();
+  }));
+
+  const save = el.querySelector('#saveEntry');
+  if(save) save.addEventListener('click', saveEntry);
+  const cancel = el.querySelector('#cancelEntry');
+  if(cancel) cancel.addEventListener('click', ()=>{ entryForm = {...BLANK_ENTRY}; entryError=''; renderMine(); });
+
+  el.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click', ()=>{
+    const x = loadCustom().find(i=>i.id===b.dataset.edit);
+    if(!x) return;
+    entryForm = {
+      kind:x.kind, id:x.id, title:x.title||'', code:x.code||'', date:x.date||'',
+      time:x.time||'', weight:(x.weight==null?'':x.weight), topics:(x.topics||[]).join(', '), detail:x.detail||'',
+    };
+    entryError = '';
+    renderMine();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }));
+
+  el.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', ()=>{
+    const x = loadCustom().find(i=>i.id===b.dataset.del);
+    if(!x || !confirm(`Delete "${x.title}"?`)) return;
+    saveCustom(loadCustom().filter(i=>i.id!==b.dataset.del));
+    if(entryForm.id === b.dataset.del) entryForm = {...BLANK_ENTRY};
+    refreshEverything();
+  }));
+
+  el.querySelectorAll('[data-toggle]').forEach(b=>b.addEventListener('click', ()=>{
+    const k = b.dataset.toggle;
+    const hidden = loadHidden();
+    saveHidden(hidden.includes(k) ? hidden.filter(h=>h!==k) : hidden.concat(k));
+    refreshEverything();
+  }));
+}
+
+// Pull whatever is currently typed into entryForm, so switching type or
+// re-rendering doesn't throw away half-finished input.
+function readFormInputs(){
+  const get = id => { const n = document.getElementById(id); return n ? n.value : undefined; };
+  ['title','code','date','time','weight','topics','detail'].forEach(k=>{
+    const v = get('f' + k[0].toUpperCase() + k.slice(1));
+    if(v !== undefined) entryForm[k] = v;
+  });
+}
+
+function saveEntry(){
+  readFormInputs();
+  const f = entryForm;
+  const title = f.title.trim();
+  if(!title){ entryError = `Give this ${KIND_META[f.kind].noun} a name first.`; return renderMine(); }
+  if(f.kind !== 'note' && !f.date){ entryError = 'Pick a date.'; return renderMine(); }
+
+  const entry = {
+    id: f.id || (Date.now().toString(36) + Math.random().toString(36).slice(2,7)),
+    kind: f.kind,
+    title,
+    date: f.date || '',
+    time: f.kind==='event' ? (f.time||'') : '',
+    code: f.kind==='exam' ? f.code.trim() : '',
+    weight: f.kind==='exam' && f.weight!=='' ? Number(f.weight) : null,
+    topics: f.kind==='exam' ? f.topics.split(',').map(t=>t.trim()).filter(Boolean) : [],
+    detail: f.kind==='exam' ? '' : f.detail.trim(),
+  };
+
+  const list = loadCustom();
+  const i = list.findIndex(x=>x.id===entry.id);
+  if(i>=0) list[i] = entry; else list.push(entry);
+  saveCustom(list);
+
+  entryForm = {...BLANK_ENTRY, kind:f.kind};
+  entryError = '';
+  refreshEverything();
+}
+
 // ---- Nav (both sidebar + tabbar share the same data-tab buttons) ----
 function switchTab(tabName){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tabName));
@@ -701,6 +1047,7 @@ renderCountdown();
 renderExams();
 renderWeekMap();
 renderTopics();
+renderMine();
 const todayStr = new Date().toISOString().slice(0,10);
 const initDate = (todayStr >= MIN_DATE && todayStr <= MAX_DATE) ? todayStr : MIN_DATE;
 renderToday(initDate);
