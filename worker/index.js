@@ -22,6 +22,7 @@ import { onRequestPost as adminBackfillKillCodesPost } from "../functions/api/ad
 import { onRequestGet as menuGet } from "../functions/api/menu.js";
 import { onRequestPost as submitMenuPost } from "../functions/api/submit-menu.js";
 import { onRequestPost as adminMenuPost } from "../functions/api/admin-menu.js";
+import { onRequestPost as plannerSyncPost, onRequestOptions as plannerSyncOptions } from "../functions/api/planner-sync.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -49,6 +50,9 @@ const routes = {
   "GET /api/menu": menuGet,
   "POST /api/submit-menu": submitMenuPost,
   "POST /api/admin-menu": adminMenuPost,
+  // Exam planner (root index.html), not the assassin game.
+  "POST /api/planner-sync": plannerSyncPost,
+  "OPTIONS /api/planner-sync": plannerSyncOptions,
 };
 
 export default {

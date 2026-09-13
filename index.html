@@ -173,6 +173,14 @@
   .btn.small{font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:9px;}
   .btn.danger{background:#fee2e2; color:#991b1b;}
   .form-err{font-size:12.5px; color:#b91c1c; margin-top:2px;}
+  .code-box{
+    display:flex; align-items:center; gap:10px; background:#f6f7fc; border:1px solid var(--line);
+    border-radius:11px; padding:10px 12px;
+  }
+  .code-box code{
+    flex:1; min-width:0; font-size:15px; letter-spacing:.06em; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    overflow-wrap:anywhere;
+  }
   .entry{display:flex; gap:12px; align-items:flex-start; padding:13px 0; border-bottom:1px solid var(--line);}
   .entry:last-child{border-bottom:none; padding-bottom:0;}
   .entry .grow{flex:1; min-width:0;}
@@ -465,13 +473,18 @@ function studyBlocksFor(weekday, parity){
 }
 const WEEKDAY_LABEL = {mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday'};
 
-// ---- Manually added entries ----
-// Anything typed into the "My Entries" tab lives in this browser's localStorage —
-// it is never sent anywhere, and it does not follow you to another device.
-// Custom exams are merged into the calendar/countdown; custom events and
-// reminders show up on their date in the day view.
-const CUSTOM_KEY = 'planner-custom-v1';
-const HIDDEN_KEY = 'planner-hidden-builtin-v1';
+// ---- The planner document ----
+// Everything Myra changes — entries she types in, school exams she's hidden,
+// ticked topics — lives in one document in localStorage. Each item carries its
+// own `updatedAt`, which is what lets two devices merge instead of overwriting
+// each other (see mergeDoc below and functions/api/planner-sync.js).
+//
+// Deletes are tombstones (`deleted:true`) rather than removals, otherwise a
+// delete on the phone would look like "missing" on the laptop and get resurrected
+// by the merge. They're dropped after 90 days.
+const DOC_KEY = 'planner-doc-v1';
+const TOMBSTONE_TTL = 90 * 86400000;
+const SECTIONS = ['entries','hidden','topics'];
 
 function readList(key){
   try{ const a = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(a) ? a : []; }
@@ -479,24 +492,103 @@ function readList(key){
 }
 function writeList(key, list){
   try{ localStorage.setItem(key, JSON.stringify(list)); }
+  catch(err){ /* storage full or blocked — the doc save below reports it */ }
+}
+
+let doc = null;
+
+function blankDoc(){ return {entries:{}, hidden:{}, topics:{}}; }
+
+function loadDoc(){
+  if(doc) return doc;
+  try{
+    const raw = JSON.parse(localStorage.getItem(DOC_KEY) || 'null');
+    doc = (raw && typeof raw === 'object') ? raw : blankDoc();
+  }catch(err){ doc = blankDoc(); }
+  SECTIONS.forEach(s=>{ if(!doc[s] || typeof doc[s] !== 'object') doc[s] = {}; });
+  migrateLegacy();
+  return doc;
+}
+
+function saveDoc({sync = true} = {}){
+  try{ localStorage.setItem(DOC_KEY, JSON.stringify(doc)); }
   catch(err){ alert('Could not save — this browser is out of storage space.'); }
+  if(sync) queueSync();
 }
-// Entries saved before categories existed used kind 'event' / 'note'; fold them
-// into the closest category the first time they're read back.
+
+// One-time lift of the pre-sync storage format into the document.
 const LEGACY_KINDS = {exam:'exams', event:'important', note:'other'};
-function loadCustom(){
-  const list = readList(CUSTOM_KEY);
-  let migrated = false;
-  list.forEach(x=>{
-    if(LEGACY_KINDS[x.kind]){ x.kind = LEGACY_KINDS[x.kind]; migrated = true; }
-    else if(!CAT[x.kind]){ x.kind = 'other'; migrated = true; }
+function migrateLegacy(){
+  if(doc.migrated) return;
+  const now = Date.now();
+  readList('planner-custom-v1').forEach(x=>{
+    const id = x.id || (now.toString(36) + Math.random().toString(36).slice(2,7));
+    const kind = LEGACY_KINDS[x.kind] || (CAT[x.kind] ? x.kind : 'other');
+    doc.entries[id] = {...x, id, kind, updatedAt: now};
   });
-  if(migrated) writeList(CUSTOM_KEY, list);
-  return list;
+  readList('planner-hidden-builtin-v1').forEach(k=>{ doc.hidden[k] = {on:true, updatedAt: now}; });
+  for(let i=0;i<localStorage.length;i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith('topic-')) doc.topics[k] = {done: localStorage.getItem(k)==='1', updatedAt: now};
+  }
+  doc.migrated = true;
+  saveDoc({sync:false});
 }
-const saveCustom = (l)=> writeList(CUSTOM_KEY, l);
-const loadHidden = ()=> readList(HIDDEN_KEY);
-const saveHidden = (l)=> writeList(HIDDEN_KEY, l);
+
+// Same rule as the server: for each item, the newer `updatedAt` wins.
+function mergeDoc(mine, theirs){
+  const out = {};
+  SECTIONS.forEach(s=>{
+    out[s] = {...(mine[s]||{})};
+    Object.entries(theirs[s]||{}).forEach(([k,v])=>{
+      if(!v || typeof v !== 'object') return;
+      const cur = out[s][k];
+      if(!cur || (v.updatedAt||0) > (cur.updatedAt||0)) out[s][k] = v;
+    });
+  });
+  out.migrated = true;
+  return out;
+}
+
+function pruneTombstones(){
+  const now = Date.now();
+  Object.entries(doc.entries).forEach(([id,e])=>{
+    if(e && e.deleted && now - (e.updatedAt||0) > TOMBSTONE_TTL) delete doc.entries[id];
+  });
+}
+
+// ---- Reads and writes the rest of the app goes through ----
+function loadCustom(){
+  return Object.values(loadDoc().entries).filter(e=>e && !e.deleted);
+}
+function upsertEntry(entry){
+  loadDoc().entries[entry.id] = {...entry, updatedAt: Date.now()};
+  saveDoc();
+}
+function deleteEntry(id){
+  const d = loadDoc();
+  // A tombstone, not a removal — otherwise the other device's copy comes back.
+  d.entries[id] = {id, deleted:true, updatedAt: Date.now()};
+  saveDoc();
+}
+function loadHidden(){
+  const h = loadDoc().hidden;
+  return Object.keys(h).filter(k=>h[k] && h[k].on);
+}
+function toggleHidden(key){
+  const d = loadDoc();
+  const on = !(d.hidden[key] && d.hidden[key].on);
+  d.hidden[key] = {on, updatedAt: Date.now()};
+  saveDoc();
+}
+function topicDone(key){
+  const t = loadDoc().topics[key];
+  return Boolean(t && t.done);
+}
+function setTopicDone(key, done){
+  loadDoc().topics[key] = {done, updatedAt: Date.now()};
+  saveDoc();
+}
 
 // Built-in exams are identified by their content, not an index, so hiding one
 // keeps working if the timetable above is edited later.
@@ -900,11 +992,11 @@ function renderTopics(){
   Object.keys(TOPIC_BANK).forEach(subject=>{
     const inputs = el.querySelectorAll(`input[data-key^="topic-${subject}-"]`);
     inputs.forEach(inp=>{
-      const saved = localStorage.getItem(inp.dataset.key) === '1';
+      const saved = topicDone(inp.dataset.key);
       inp.checked = saved;
       if(saved) document.getElementById(`row-${inp.dataset.key}`).classList.add('done');
       inp.addEventListener('change', ()=>{
-        localStorage.setItem(inp.dataset.key, inp.checked ? '1':'0');
+        setTopicDone(inp.dataset.key, inp.checked);
         document.getElementById(`row-${inp.dataset.key}`).classList.toggle('done', inp.checked);
         updateProgress(subject);
       });
@@ -917,6 +1009,185 @@ function renderTopics(){
     const done = [...inputs].filter(i=>i.checked).length;
     document.getElementById(`bar-${subject}`).style.width = (total? (done/total*100):0) + '%';
   }
+}
+
+// ---- Cross-device sync ----
+// The planner is served by the same Cloudflare Worker that handles
+// /api/planner-sync, so this is a same-origin call. If you ever host the page
+// somewhere else, put that Worker's full URL here instead (the endpoint sends
+// CORS headers, so a different origin works too).
+const SYNC_BASE = '';
+const SYNC_URL = SYNC_BASE.replace(/\/$/,'') + '/api/planner-sync';
+
+// The code stays on the device and is deliberately NOT part of the synced
+// document — it's the key to it.
+const SYNC_CODE_KEY = 'planner-sync-code';
+const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'; // no l/i/o/0/1 — these get typed by hand
+
+let syncTimer = null, syncing = false, syncPane = 'idle', codeVisible = false;
+let syncStatus = {state:'idle', at:null, error:null};
+
+const syncCode = ()=> localStorage.getItem(SYNC_CODE_KEY) || '';
+function setSyncCode(code){
+  if(code) localStorage.setItem(SYNC_CODE_KEY, code);
+  else localStorage.removeItem(SYNC_CODE_KEY);
+}
+function newSyncCode(){
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return [...bytes].map(b=>CODE_ALPHABET[b % CODE_ALPHABET.length]).join('').match(/.{4}/g).join('-');
+}
+function normalizeCode(raw){
+  const flat = String(raw||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  return flat.replace(/(.{4})(?=.)/g,'$1-');
+}
+
+function queueSync(){
+  if(!syncCode()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, 1200);
+}
+
+async function syncNow(){
+  const code = syncCode();
+  if(!code || syncing) return;
+  syncing = true;
+  syncStatus = {...syncStatus, state:'syncing', error:null};
+  renderSyncCard();
+  try{
+    loadDoc();
+    pruneTombstones();
+    const res = await fetch(SYNC_URL, {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify({code, doc}),
+    });
+    if(!res.ok){
+      const detail = await res.json().catch(()=>({}));
+      // 404/405/501 all mean "this server doesn't have the sync route" — most
+      // likely the Worker hasn't been redeployed since sync was added.
+      throw new Error(detail.error || ([404,405,501].includes(res.status)
+        ? 'Sync isn\'t available on the server yet — the Worker needs redeploying.'
+        : `Server said ${res.status}.`));
+    }
+    const data = await res.json();
+    const before = JSON.stringify(doc);
+    doc = mergeDoc(doc, data.doc || {});
+    saveDoc({sync:false});
+    syncStatus = {state:'ok', at: Date.now(), error:null};
+    if(JSON.stringify(doc) === before){
+      renderSyncCard();
+    } else {
+      readFormInputs();      // don't lose half-typed input to an incoming change
+      refreshEverything();
+    }
+  }catch(err){
+    const offline = (typeof navigator !== 'undefined') && navigator.onLine === false;
+    syncStatus = {state:'error', at: syncStatus.at, error: offline ? 'No internet — changes will sync when you\'re back online.' : (err.message || 'Could not reach the server.')};
+    renderSyncCard();
+  }finally{
+    syncing = false;
+  }
+}
+
+function agoText(ts){
+  if(!ts) return '';
+  const secs = Math.round((Date.now()-ts)/1000);
+  if(secs < 60) return 'just now';
+  if(secs < 3600) return `${Math.round(secs/60)} min ago`;
+  return `${Math.round(secs/3600)}h ago`;
+}
+
+function syncCardHtml(){
+  const code = syncCode();
+  if(!code){
+    if(syncPane === 'enter'){
+      return `<div class="card">
+        <h3 style="margin:0 0 4px; font-size:16px">🔗 Connect this device</h3>
+        <div class="exam-meta">Type the sync code from your other device. Everything on both ends gets merged — nothing is thrown away.</div>
+        <div class="form-row" style="margin-top:12px">
+          <div class="field"><label for="codeIn">Sync code</label>
+            <input id="codeIn" placeholder="abcd-efgh-ijkl-mnop" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+        </div>
+        ${syncStatus.error ? `<div class="form-err">${esc(syncStatus.error)}</div>` : ''}
+        <div style="display:flex; gap:10px; margin-top:6px; flex-wrap:wrap">
+          <button class="btn" id="connectSync">Connect</button>
+          <button class="btn ghost" id="cancelSync">Cancel</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="card">
+      <h3 style="margin:0 0 4px; font-size:16px">📴 Sync is off</h3>
+      <div class="exam-meta">Everything is saved on this device only. Turn on sync to see the same entries, hidden exams and ticked topics on your phone and laptop.</div>
+      <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
+        <button class="btn" id="startSync">Turn on sync</button>
+        <button class="btn ghost" id="haveCode">I already have a code</button>
+      </div>
+    </div>`;
+  }
+
+  const s = syncStatus;
+  const line = s.state==='syncing' ? '<span style="color:var(--sub)">Syncing…</span>'
+    : s.state==='error' ? `<span style="color:#b91c1c">${esc(s.error)}</span>`
+    : s.at ? `<span style="color:#047857">✅ Synced ${agoText(s.at)}</span>`
+    : '<span style="color:var(--sub)">Waiting for first sync…</span>';
+
+  return `<div class="card">
+    <h3 style="margin:0 0 4px; font-size:16px">🔄 Syncing across devices</h3>
+    <div class="exam-meta" style="margin-bottom:10px">${line}</div>
+    <div class="code-box">
+      <code id="codeText">${codeVisible ? esc(code) : '••••-••••-••••-••••'}</code>
+      <button class="btn ghost small" id="toggleCode">${codeVisible ? 'Hide' : 'Show'}</button>
+    </div>
+    <div class="note" style="margin-top:10px">Enter this code on your other device to link it. Anyone with the code can read and change your planner, so keep it to yourself.</div>
+    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
+      <button class="btn ghost small" id="copyCode">Copy code</button>
+      <button class="btn ghost small" id="syncNowBtn">Sync now</button>
+      <button class="btn danger small" id="stopSync">Turn off sync</button>
+    </div>
+  </div>`;
+}
+
+function renderSyncCard(){
+  const host = document.getElementById('syncCard');
+  if(!host) return;
+  host.innerHTML = syncCardHtml();
+
+  const on = (id, fn)=>{ const n = document.getElementById(id); if(n) n.addEventListener('click', fn); };
+
+  on('startSync', async ()=>{
+    setSyncCode(newSyncCode());
+    codeVisible = true;
+    syncStatus = {state:'idle', at:null, error:null};
+    renderSyncCard();
+    await syncNow();
+  });
+  on('haveCode', ()=>{ syncPane = 'enter'; syncStatus = {...syncStatus, error:null}; renderSyncCard(); });
+  on('cancelSync', ()=>{ syncPane = 'idle'; syncStatus = {...syncStatus, error:null}; renderSyncCard(); });
+  on('connectSync', async ()=>{
+    const code = normalizeCode(document.getElementById('codeIn').value);
+    if(code.replace(/-/g,'').length < 8){
+      syncStatus = {...syncStatus, error:'That code looks too short — check it against the other device.'};
+      return renderSyncCard();
+    }
+    setSyncCode(code);
+    syncPane = 'idle';
+    syncStatus = {state:'idle', at:null, error:null};
+    renderSyncCard();
+    await syncNow();
+  });
+  on('toggleCode', ()=>{ codeVisible = !codeVisible; renderSyncCard(); });
+  on('copyCode', async ()=>{
+    try{ await navigator.clipboard.writeText(syncCode()); alert('Sync code copied.'); }
+    catch(err){ codeVisible = true; renderSyncCard(); alert('Copy failed — the code is now on screen, type it across.'); }
+  });
+  on('syncNowBtn', syncNow);
+  on('stopSync', ()=>{
+    if(!confirm('Turn off sync on this device? Your entries stay here, but changes will stop reaching your other devices.')) return;
+    setSyncCode('');
+    syncStatus = {state:'idle', at:null, error:null};
+    codeVisible = false;
+    renderSyncCard();
+  });
 }
 
 // ---- My Entries tab ----
@@ -935,6 +1206,7 @@ function refreshEverything(){
   renderCountdown();
   renderExams();
   renderToday(currentDate);
+  renderTopics();
   renderMine();
 }
 
@@ -1074,7 +1346,8 @@ function renderMine(){
     + entryFormHtml()
     + entryListHtml()
     + builtinListHtml()
-    + `<div class="note">Everything here is saved on this device only, in this browser. It isn't sent anywhere — but it also won't appear if you open the planner on a different phone or laptop, and clearing your browser data will wipe it.</div>`;
+    + '<div id="syncCard"></div>';
+  renderSyncCard();
 
   const det = el.querySelector('details.builtins');
   if(det) det.addEventListener('toggle', ()=>{ builtinsOpen = det.open; });
@@ -1106,15 +1379,13 @@ function renderMine(){
   el.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', ()=>{
     const x = loadCustom().find(i=>i.id===b.dataset.del);
     if(!x || !confirm(`Delete "${x.title}"?`)) return;
-    saveCustom(loadCustom().filter(i=>i.id!==b.dataset.del));
+    deleteEntry(b.dataset.del);
     if(entryForm.id === b.dataset.del) entryForm = {...BLANK_ENTRY};
     refreshEverything();
   }));
 
   el.querySelectorAll('[data-toggle]').forEach(b=>b.addEventListener('click', ()=>{
-    const k = b.dataset.toggle;
-    const hidden = loadHidden();
-    saveHidden(hidden.includes(k) ? hidden.filter(h=>h!==k) : hidden.concat(k));
+    toggleHidden(b.dataset.toggle);
     refreshEverything();
   }));
 }
@@ -1148,10 +1419,7 @@ function saveEntry(){
     detail: f.kind==='exams' ? '' : f.detail.trim(),
   };
 
-  const list = loadCustom();
-  const i = list.findIndex(x=>x.id===entry.id);
-  if(i>=0) list[i] = entry; else list.push(entry);
-  saveCustom(list);
+  upsertEntry(entry);
 
   entryForm = {...BLANK_ENTRY, kind:f.kind};
   entryError = '';
@@ -1204,6 +1472,7 @@ if('serviceWorker' in navigator && 'PushManager' in window){
 }
 
 // ---- Init ----
+loadDoc();
 renderCountdown();
 renderExams();
 renderWeekMap();
@@ -1212,6 +1481,12 @@ renderMine();
 const todayStr = todayISO();
 const initDate = (todayStr >= MIN_DATE && todayStr <= MAX_DATE) ? todayStr : MIN_DATE;
 renderToday(initDate);
+
+// Pull anything the other device changed: on open, whenever the app is brought
+// back to the foreground, and when the connection returns.
+if(syncCode()) syncNow();
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) syncNow(); });
+window.addEventListener('online', syncNow);
 </script>
 </body>
 </html>
