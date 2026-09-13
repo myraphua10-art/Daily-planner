@@ -175,7 +175,7 @@
 </div>
 
 <script>
-const SUBJECT_COLORS = {Mathematics:'var(--math)', History:'var(--hist)', Physics:'var(--phy)', Chemistry:'var(--chem)', 'Higher Chinese':'#ec4899', 'English Language':'#14b8a6'};
+const SUBJECT_COLORS = {Mathematics:'var(--math)', History:'var(--hist)', Physics:'var(--phy)', Chemistry:'var(--chem)', 'Higher Chinese':'#ec4899', 'English Language':'#14b8a6', 'Inquiry and Advocacy':'#ef4444'};
 
 // ---- Push notifications ----
 // Replace PUSH_SERVER with your deployed Cloudflare Worker URL (e.g. https://yourworker.yourname.workers.dev)
@@ -237,12 +237,13 @@ const EXAMS = [
   {subject:'Mathematics', code:'M1 PPA2-CBA', date:'2026-07-09', estimated:false, weight:15, topics:['Techniques of Differentiation','Applications of Differentiation']},
   {subject:'Higher Chinese', code:'O-Level Oral', date:'2026-07-17', estimated:false, weight:null, weightLabel:'O-Level component', topics:['Reading aloud passage','Conversation','Picture/topic discussion']},
   {subject:'History', code:'CBA2', date:'2026-08-05', estimated:true, weight:15, topics:['Korean War (TB p.72-96)','Vietnam War (TB p.100-132)','Structured essay: Support → Opposing View → Rebuttal']},
-  {subject:'Physics', code:'AA-PR', date:'2026-08-05', estimated:true, weight:15, topics:['Mechanics','Light','All Y4 topics (practical)']},
   {subject:'Mathematics', code:'M2 PPA2-CBA', date:'2026-08-12', estimated:true, weight:15, topics:['Applications of Differentiation','Applications of Integration']},
   {subject:'Chemistry', code:'AA-PR', date:'2026-09-15', estimated:false, weight:15, topics:['All Y3 & Y4 topics']},
   {subject:'English Language', code:'EYA', date:'2026-09-23', estimated:false, weight:55, topics:['All Y3 & Y4 topics']},
+  {subject:'Physics', code:'AA-PR (practical)', date:'2026-09-29', estimated:false, weight:15, topics:['Mechanics','Light','All Y4 topics (practical)']},
   {subject:'Higher Chinese', code:'EYA', date:'2026-10-01', estimated:false, weight:null, weightLabel:'EYA component', topics:['All Y3 & Y4 topics']},
-  {subject:'History', code:'EYA', date:'2026-10-02', estimated:false, weight:55, topics:['Unit 1: Causes of WWII','Unit 2: Cold War Europe','Unit 3: Cold War Asia','Source-based + essay','Journal also lists a 2nd subject EYA same day — handwriting unclear, confirm with timetable']},
+  {subject:'History', code:'EYA', date:'2026-10-02', estimated:false, weight:55, topics:['Unit 1: Causes of WWII','Unit 2: Cold War Europe','Unit 3: Cold War Asia','Source-based + essay']},
+  {subject:'Inquiry and Advocacy', code:'EYA', date:'2026-10-02', estimated:false, weight:null, weightLabel:'EYA component', topics:['All Y3 & Y4 topics','Same day as History EYA']},
   {subject:'Mathematics', code:'M2 EYA', date:'2026-10-06', estimated:false, weight:30, topics:['Applications of Differentiation','Applications of Integration']},
   {subject:'Mathematics', code:'M1 EYA', date:'2026-10-07', estimated:false, weight:30, topics:['All Y3 units','Probability → Trigonometry III']},
   {subject:'Chemistry', code:'EYA', date:'2026-10-08', estimated:false, weight:55, topics:['All Y3 & Y4 topics']},
@@ -398,12 +399,19 @@ function renderCountdown(){
 }
 
 function renderExams(){
-  const sorted = [...EXAMS].sort((a,b)=> new Date(a.date)-new Date(b.date));
+  // Exams drop off this list the day after they happen — only today's and
+  // future papers are shown, so the calendar always reads as a to-do list.
+  const sorted = EXAMS.filter(e=>daysUntil(e.date)>=0).sort((a,b)=> new Date(a.date)-new Date(b.date));
   const el = document.getElementById('tab-exams');
+  if(!sorted.length){
+    el.innerHTML = '<h2 class="section-title">🎯 Master Exam Calendar</h2>'
+      + '<div class="card"><h3>🎉 That\'s every exam done</h3><div class="exam-meta" style="margin-top:6px">Nothing left on the calendar. Go and have a life.</div></div>';
+    return;
+  }
   el.innerHTML = '<h2 class="section-title">🎯 Master Exam Calendar</h2>' + sorted.map(e=>{
     const d = daysUntil(e.date);
-    const dColor = d<0 ? '#9ca3af' : d<=7 ? '#fee2e2' : d<=21 ? '#fef3c7' : '#e0f2fe';
-    const dText = d<0 ? '#6b7280' : d<=7 ? '#991b1b' : d<=21 ? '#92400e' : '#0369a1';
+    const dColor = d<=7 ? '#fee2e2' : d<=21 ? '#fef3c7' : '#e0f2fe';
+    const dText = d<=7 ? '#991b1b' : d<=21 ? '#92400e' : '#0369a1';
     return `<div class="card exam-card">
       <div class="exam-dot" style="background:${SUBJECT_COLORS[e.subject]}"></div>
       <div style="flex:1; min-width:0">
@@ -412,9 +420,9 @@ function renderExams(){
         <div class="exam-meta" style="margin-top:6px">${fmtDate(e.date)} &nbsp;·&nbsp; ${e.weight!=null?`<span class="weight">${e.weight}%</span> of subject grade`:e.weightLabel}</div>
         <div>${e.topics.map(t=>`<span class="chip">${t}</span>`).join('')}</div>
       </div>
-      <div class="exam-days" style="background:${dColor}; color:${dText}">${d<0?'past':d+'d'}</div>
+      <div class="exam-days" style="background:${dColor}; color:${dText}">${d===0?'today':d+'d'}</div>
     </div>`;
-  }).join('') + `<div class="note">Dates marked "estimated" are derived from term-week (e.g. T3W6) rather than an exact calendar date confirmed by a teacher — worth a quick check against the school portal closer to the time.</div>`;
+  }).join('') + (sorted.some(e=>e.estimated) ? `<div class="note">Dates marked "estimated" are derived from term-week (e.g. T3W6) rather than an exact calendar date confirmed by a teacher — worth a quick check against the school portal closer to the time.</div>` : '');
 }
 
 function renderWeekMap(){
@@ -455,7 +463,8 @@ function buildDayTimeline(dateStr){
   const wdMap = {1:'mon',2:'tue',3:'wed',4:'thu',5:'fri'};
   const weekday = wdMap[wdIdx];
   const parity = parityOf(dateStr);
-  const examToday = EXAMS.find(e=>e.date===dateStr);
+  // More than one paper can land on the same day (History + InA on 2 Oct).
+  const examsToday = EXAMS.filter(e=>e.date===dateStr);
   const override = DATE_OVERRIDES[dateStr];
 
   if(wdIdx===6){ // Saturday — open study day
@@ -551,7 +560,7 @@ function buildDayTimeline(dateStr){
     }
   }
 
-  return {parity, weekday, ownDay, examToday, items, freed, override};
+  return {parity, weekday, ownDay, examsToday, items, freed, override};
 }
 
 let currentDate = null;
@@ -569,9 +578,10 @@ function renderToday(dateStr){
     </div>
     <span class="parity-pill ${data.parity}">${data.parity.toUpperCase()} WEEK</span>
   </div>`;
-  if(data.examToday){
+  if(data.examsToday && data.examsToday.length){
+    const list = data.examsToday.map(e=>`${e.subject} ${e.code} (${e.weight!=null?e.weight+'%':e.weightLabel})`).join(' + ');
     header += `<div class="card" style="background:#fef2f2; border:1px solid #fecaca;">
-      <strong>🎯 EXAM TODAY:</strong> ${data.examToday.subject} ${data.examToday.code} (${data.examToday.weight!=null?data.examToday.weight+'%':data.examToday.weightLabel}). Light recap only — no new content.
+      <strong>🎯 EXAM${data.examsToday.length>1?'S':''} TODAY:</strong> ${list}. Light recap only — no new content.
     </div>`;
   }
   if(data.ownDay){
