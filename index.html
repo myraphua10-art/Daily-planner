@@ -125,11 +125,34 @@
   .topic-row.done span{text-decoration:line-through; color:var(--sub);}
   .note{font-size:12px; color:var(--sub); background:#f8f9fd; border-radius:10px; padding:10px 14px; margin-top:6px;}
 
+  /* ===== Category dropdowns (What's Coming Up) ===== */
+  .cat-card{background:var(--card); border-radius:16px; box-shadow:var(--shadow); margin-bottom:12px; overflow:hidden;}
+  .cat-card > summary{
+    display:flex; align-items:center; gap:13px; padding:15px 18px; cursor:pointer; list-style:none;
+    -webkit-user-select:none; user-select:none;
+  }
+  .cat-card > summary::-webkit-details-marker{display:none;}
+  .cat-card > summary:active{background:#f8f9fd;}
+  .cat-ic{width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0;}
+  .cat-name{flex:1; min-width:0;}
+  .cat-name b{display:block; font-size:15.5px; line-height:1.3;}
+  .cat-name span{font-size:11.5px; color:var(--sub);}
+  .cat-count{font-size:12.5px; font-weight:700; padding:4px 11px; border-radius:20px; flex-shrink:0;}
+  .cat-chev{color:#c3c6d4; font-size:11px; flex-shrink:0; transition:transform .18s;}
+  .cat-card[open] .cat-chev{transform:rotate(90deg);}
+  .cat-body{padding:0 18px 14px;}
+  .exam-card.flat{border-top:1px solid var(--line); padding:14px 0; margin:0;}
+  .ev-row{display:flex; gap:12px; align-items:flex-start; padding:11px 0; border-top:1px solid var(--line);}
+  .ev-date{width:78px; flex-shrink:0; font-size:11.5px; font-weight:700; color:var(--sub); padding-top:3px;}
+  .ev-main{flex:1; min-width:0; font-size:14px; line-height:1.45;}
+  .ev-main .sub{font-size:12px; color:var(--sub); margin-top:2px;}
+  .sub-head{font-size:11px; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; padding:14px 0 2px;}
+
   /* ===== My Entries (manual input) ===== */
-  .seg{display:flex; gap:6px; background:#f0f1fa; padding:4px; border-radius:13px; margin-bottom:16px;}
+  .seg{display:flex; flex-wrap:wrap; gap:5px; background:#f0f1fa; padding:4px; border-radius:13px; margin-bottom:16px;}
   .seg button{
-    flex:1; border:none; background:none; font:inherit; font-size:13px; font-weight:600;
-    padding:10px 6px; border-radius:10px; cursor:pointer; color:var(--sub);
+    flex:1 1 92px; border:none; background:none; font:inherit; font-size:12.5px; font-weight:600;
+    padding:10px 4px; border-radius:10px; cursor:pointer; color:var(--sub); white-space:nowrap;
   }
   .seg button.active{background:#fff; color:var(--accent); box-shadow:0 1px 5px rgba(30,30,60,.12);}
   .form-row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:13px;}
@@ -184,7 +207,7 @@
     <h1>📚 Myra's Planner</h1>
     <div class="tagline">RGS Sec 4 · Student-Athlete</div>
     <button data-tab="today" class="active"><span class="ic">📅</span> Today's Plan</button>
-    <button data-tab="exams"><span class="ic">🎯</span> Exam Calendar</button>
+    <button data-tab="exams"><span class="ic">🗂️</span> What&#39;s Coming Up</button>
     <button data-tab="week"><span class="ic">🗓️</span> Weekly Free-Time Map</button>
     <button data-tab="topics"><span class="ic">✅</span> Topic Tracker</button>
     <button data-tab="mine"><span class="ic">➕</span> My Entries</button>
@@ -210,7 +233,7 @@
 
   <nav class="tabbar">
     <button data-tab="today" class="active"><span class="ic">📅</span>Today</button>
-    <button data-tab="exams"><span class="ic">🎯</span>Exams</button>
+    <button data-tab="exams"><span class="ic">🗂️</span>Upcoming</button>
     <button data-tab="week"><span class="ic">🗓️</span>Week Map</button>
     <button data-tab="topics"><span class="ic">✅</span>Topics</button>
     <button data-tab="mine"><span class="ic">➕</span>Add</button>
@@ -342,10 +365,17 @@ function daysUntil(dateStr){
   const target = new Date(dateStr+'T00:00:00');
   return Math.round((target-today)/86400000);
 }
+// Formats a Date in LOCAL time. toISOString() would convert to UTC first, which
+// in Singapore (UTC+8) rolls the date back a day — that made the next-day button
+// a no-op and opened the app on yesterday before 8am.
+function toISODate(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function todayISO(){ return toISODate(new Date()); }
 function addDays(dateStr, n){
   const d = new Date(dateStr+'T00:00:00');
   d.setDate(d.getDate()+n);
-  return d.toISOString().slice(0,10);
+  return toISODate(d);
 }
 
 // One-off timetable swaps: actual calendar weekday stays the same (for tuition/swim/
@@ -358,29 +388,42 @@ const DATE_OVERRIDES = {
 // Fixed one-off dates, plus a recurring weekly pattern checked separately in renderToday().
 const PERSONAL_DATES = ['2026-07-03','2026-07-10','2026-07-12','2026-07-19'];
 
+// The five buckets everything on the calendar falls into. Order here is the
+// order the cards appear in on the Upcoming tab.
+const CATEGORIES = [
+  {id:'exams',     icon:'🎯', label:'Exams',     noun:'exam',      blurb:'papers, CBAs and EYAs',            color:'#ef4444', tint:'#fee2e2'},
+  {id:'important', icon:'📋', label:'Important', noun:'event',     blurb:'meetings, deadlines, school',      color:'#f59e0b', tint:'#fef3c7'},
+  {id:'social',    icon:'🎉', label:'Social',    noun:'event',     blurb:'birthdays, parties, going out',    color:'#ec4899', tint:'#fce7f3'},
+  {id:'sport',     icon:'🏊', label:'Sport',     noun:'session',   blurb:'training, meets and competitions', color:'#0891b2', tint:'#cffafe'},
+  {id:'other',     icon:'📝', label:'Other',     noun:'reminder',  blurb:'anything else you noted down',     color:'#64748b', tint:'#e2e8f0'},
+];
+const CAT = Object.fromEntries(CATEGORIES.map(c=>[c.id, c]));
+
 // School & family calendar events from the journal — plain/non-sensitive, shown as-is.
 const EVENTS = {
-  '2026-07-05': ["🎂 Chen chen's birthday"],
-  '2026-07-06': ['🇸🇬 Youth Day (PH)'],
-  '2026-07-20': ["🎂 Qingyang's birthday"],
-  '2026-08-07': ['🎉 National Day Celebration (school)'],
-  '2026-08-10': ['🇸🇬 National Day (PH, observed)'],
-  '2026-08-21': ["🏫 Founder's Day"],
-  '2026-09-03': ["🍎 Teachers' Day Celebration (school)"],
-  '2026-09-04': ["🍎 Teachers' Day — school holiday"],
-  '2026-09-05': ['🎂 Myra\'s birthday', '🏖️ September school holidays begin'],
-  '2026-09-06': ['🎉 Birthday dinner'],
-  '2026-09-14': ['🏅 Colours Award Ceremony', "🎂 Nick's/Nikki's birthday (name unclear in journal)"],
-  '2026-09-22': ["🎂 Dad's birthday"],
-  '2026-09-24': ["🎂 Nicole's birthday"],
-  '2026-10-02': ['🎤 Weekend concert, 8pm (exact day — Sat/Sun — unclear in journal)'],
-  '2026-10-30': ['🏊 SNSC SCM (swim meet)'],
-  '2026-10-31': ['🏊 SNSC SCM (swim meet)'],
-  '2026-11-05': ['🎯 HCL O-Levels'],
-  '2026-11-06': ['🎉 Prom'],
-  '2026-11-27': ["🏊 SEA Age (swim meet)"],
-  '2026-11-28': ["🏊 SEA Age (swim meet)"],
-  '2026-11-29': ["🏊 SEA Age (swim meet)"],
+  '2026-07-05': [{text:"🎂 Chen chen's birthday", cat:'social'}],
+  '2026-07-06': [{text:'🇸🇬 Youth Day (PH)', cat:'important'}],
+  '2026-07-20': [{text:"🎂 Qingyang's birthday", cat:'social'}],
+  '2026-08-07': [{text:'🎉 National Day Celebration (school)', cat:'important'}],
+  '2026-08-10': [{text:'🇸🇬 National Day (PH, observed)', cat:'important'}],
+  '2026-08-21': [{text:"🏫 Founder's Day", cat:'important'}],
+  '2026-09-03': [{text:"🍎 Teachers' Day Celebration (school)", cat:'important'}],
+  '2026-09-04': [{text:"🍎 Teachers' Day — school holiday", cat:'important'}],
+  '2026-09-05': [{text:"🎂 Myra's birthday", cat:'social'}, {text:'🏖️ September school holidays begin', cat:'important'}],
+  '2026-09-06': [{text:'🎉 Birthday dinner', cat:'social'}],
+  '2026-09-14': [{text:'🏅 Colours Award Ceremony', cat:'important'}, {text:"🎂 Nick's/Nikki's birthday (name unclear in journal)", cat:'social'}],
+  '2026-09-22': [{text:"🎂 Dad's birthday", cat:'social'}],
+  '2026-09-24': [{text:"🎂 Nicole's birthday", cat:'social'}],
+  '2026-10-02': [{text:'🎤 Weekend concert, 8pm (exact day — Sat/Sun — unclear in journal)', cat:'social'}],
+  '2026-10-30': [{text:'🏊 SNSC SCM (swim meet)', cat:'sport'}],
+  '2026-10-31': [{text:'🏊 SNSC SCM (swim meet)', cat:'sport'}],
+  // Already listed as an exam too, so it's tagged 'exams' to keep it out of the
+  // Important list — the exam card is the one that shows on the Upcoming tab.
+  '2026-11-05': [{text:'🎯 HCL O-Levels', cat:'exams'}],
+  '2026-11-06': [{text:'🎉 Prom', cat:'social'}],
+  '2026-11-27': [{text:'🏊 SEA Age (swim meet)', cat:'sport'}],
+  '2026-11-28': [{text:'🏊 SEA Age (swim meet)', cat:'sport'}],
+  '2026-11-29': [{text:'🏊 SEA Age (swim meet)', cat:'sport'}],
 };
 
 // Fixed weekly tuition (actual calendar weekday — applies regardless of OWN DAY / overrides).
@@ -438,7 +481,19 @@ function writeList(key, list){
   try{ localStorage.setItem(key, JSON.stringify(list)); }
   catch(err){ alert('Could not save — this browser is out of storage space.'); }
 }
-const loadCustom = ()=> readList(CUSTOM_KEY);
+// Entries saved before categories existed used kind 'event' / 'note'; fold them
+// into the closest category the first time they're read back.
+const LEGACY_KINDS = {exam:'exams', event:'important', note:'other'};
+function loadCustom(){
+  const list = readList(CUSTOM_KEY);
+  let migrated = false;
+  list.forEach(x=>{
+    if(LEGACY_KINDS[x.kind]){ x.kind = LEGACY_KINDS[x.kind]; migrated = true; }
+    else if(!CAT[x.kind]){ x.kind = 'other'; migrated = true; }
+  });
+  if(migrated) writeList(CUSTOM_KEY, list);
+  return list;
+}
 const saveCustom = (l)=> writeList(CUSTOM_KEY, l);
 const loadHidden = ()=> readList(HIDDEN_KEY);
 const saveHidden = (l)=> writeList(HIDDEN_KEY, l);
@@ -462,7 +517,7 @@ function colorFor(subject){
 }
 
 function customExams(){
-  return loadCustom().filter(x=>x.kind==='exam' && x.date).map(x=>({
+  return loadCustom().filter(x=>x.kind==='exams' && x.date).map(x=>({
     subject: esc(x.title) || 'Exam',
     code: esc(x.code) || 'Paper',
     date: x.date,
@@ -478,12 +533,39 @@ function allExams(){
   return EXAMS.filter(e=>!hidden.includes(builtinKey(e))).concat(customExams());
 }
 function eventsFor(dateStr){
-  const out = (EVENTS[dateStr]||[]).slice();
-  loadCustom().filter(x=>x.kind!=='exam' && x.date===dateStr).forEach(x=>{
-    const head = [x.kind==='event'?'📌':'📝', x.time||'', esc(x.title)].filter(Boolean).join(' ');
+  const out = (EVENTS[dateStr]||[]).map(ev=>ev.text);
+  loadCustom().filter(x=>x.kind!=='exams' && x.date===dateStr).forEach(x=>{
+    const head = [(CAT[x.kind]||CAT.other).icon, x.time||'', esc(x.title)].filter(Boolean).join(' ');
     out.push(head + (x.detail?` — ${esc(x.detail)}`:''));
   });
   return out;
+}
+
+// Everything still to come in one category, built-in and hand-added together.
+// Exams are excluded — they have their own richer cards.
+function categoryItems(catId){
+  const out = [];
+  Object.entries(EVENTS).forEach(([date, list])=>{
+    if(daysUntil(date) < 0) return;
+    list.forEach(ev=>{ if((ev.cat||'important')===catId) out.push({date, text:ev.text}); });
+  });
+  loadCustom().forEach(x=>{
+    if(x.kind !== catId) return;
+    if(x.date && daysUntil(x.date) < 0) return;
+    out.push({date:x.date||'', text:esc(x.title), time:x.time||'', detail:esc(x.detail||''), mine:true, id:x.id});
+  });
+  return out.sort((a,b)=>{
+    if(!a.date) return 1;
+    if(!b.date) return -1;
+    return a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'');
+  });
+}
+
+// Swim/gym blocks for a given day, read straight off the day timeline so the
+// Sport category can never drift out of sync with Today's Plan.
+function trainingOn(dateStr){
+  try{ return buildDayTimeline(dateStr).items.filter(i=>i.color===SPORT_COLOR); }
+  catch(err){ return []; }
 }
 
 function nextExam(){
@@ -505,21 +587,27 @@ function renderCountdown(){
     </div>`;
 }
 
-function renderExams(){
-  // Exams drop off this list the day after they happen — only today's and
-  // future papers are shown, so the calendar always reads as a to-do list.
+// All five start collapsed so the whole term fits on one screen; whichever ones
+// get opened stay open on the next visit.
+const OPEN_KEY = 'planner-open-cats-v1';
+function openCats(){ return readList(OPEN_KEY); }
+function setCatOpen(id, open){
+  const cur = new Set(openCats());
+  open ? cur.add(id) : cur.delete(id);
+  writeList(OPEN_KEY, [...cur]);
+}
+
+function daysPill(d){
+  const bg = d<=7 ? '#fee2e2' : d<=21 ? '#fef3c7' : '#e0f2fe';
+  const fg = d<=7 ? '#991b1b' : d<=21 ? '#92400e' : '#0369a1';
+  return `<div class="exam-days" style="background:${bg}; color:${fg}">${d===0?'today':d+'d'}</div>`;
+}
+
+function examCardsHtml(){
+  // Exams drop off the day after they happen, so this always reads as a to-do list.
   const sorted = allExams().filter(e=>daysUntil(e.date)>=0).sort((a,b)=> new Date(a.date)-new Date(b.date));
-  const el = document.getElementById('tab-exams');
-  if(!sorted.length){
-    el.innerHTML = '<h2 class="section-title">🎯 Master Exam Calendar</h2>'
-      + '<div class="card"><h3>🎉 That\'s every exam done</h3><div class="exam-meta" style="margin-top:6px">Nothing left on the calendar. Go and have a life.</div></div>';
-    return;
-  }
-  el.innerHTML = '<h2 class="section-title">🎯 Master Exam Calendar</h2>' + sorted.map(e=>{
-    const d = daysUntil(e.date);
-    const dColor = d<=7 ? '#fee2e2' : d<=21 ? '#fef3c7' : '#e0f2fe';
-    const dText = d<=7 ? '#991b1b' : d<=21 ? '#92400e' : '#0369a1';
-    return `<div class="card exam-card">
+  if(!sorted.length) return `<div class="empty">🎉 That's every exam done. Go and have a life.</div>`;
+  return sorted.map(e=>`<div class="exam-card flat">
       <div class="exam-dot" style="background:${colorFor(e.subject)}"></div>
       <div style="flex:1; min-width:0">
         <h3>${e.subject} <span style="color:${colorFor(e.subject)}">· ${e.code}</span></h3>
@@ -527,9 +615,78 @@ function renderExams(){
         <div class="exam-meta" style="margin-top:6px">${fmtDate(e.date)} &nbsp;·&nbsp; ${e.weight!=null?`<span class="weight">${e.weight}%</span> of subject grade`:e.weightLabel}</div>
         <div>${e.topics.map(t=>`<span class="chip">${t}</span>`).join('')}</div>
       </div>
-      <div class="exam-days" style="background:${dColor}; color:${dText}">${d===0?'today':d+'d'}</div>
+      ${daysPill(daysUntil(e.date))}
+    </div>`).join('')
+    + (sorted.some(e=>e.estimated) ? `<div class="note">Dates marked "estimated" come from a term-week (e.g. T3W6) rather than an exact date from a teacher — worth checking against the school portal closer to the time.</div>` : '');
+}
+
+function eventRowsHtml(catId){
+  const items = categoryItems(catId);
+  if(!items.length) return `<div class="empty">Nothing coming up. Add something in the ➕ tab.</div>`;
+  return items.map(it=>{
+    const d = it.date ? daysUntil(it.date) : null;
+    return `<div class="ev-row">
+      <div class="ev-date">${it.date ? fmtDateShort(it.date) : 'no date'}</div>
+      <div class="ev-main">
+        ${it.time?`<b>${it.time}</b> · `:''}${it.text}
+        ${it.detail?`<div class="sub">${it.detail}</div>`:''}
+      </div>
+      ${d===null ? '' : daysPill(d)}
     </div>`;
-  }).join('') + (sorted.some(e=>e.estimated) ? `<div class="note">Dates marked "estimated" are derived from term-week (e.g. T3W6) rather than an exact calendar date confirmed by a teacher — worth a quick check against the school portal closer to the time.</div>` : '');
+  }).join('');
+}
+
+function trainingHtml(){
+  // Next 7 days of the recurring swim/gym pattern, pulled from the day timeline.
+  const rows = [];
+  for(let i=0;i<7;i++){
+    const day = addDays(todayISO(), i);
+    if(day > MAX_DATE) break;
+    const sessions = trainingOn(day);
+    if(!sessions.length) continue;
+    rows.push(`<div class="ev-row">
+      <div class="ev-date">${i===0?'Today':fmtDateShort(day)}</div>
+      <div class="ev-main">${sessions.map(s=>`<div>${s.title} · <span style="color:var(--sub)">${s.time}</span></div>`).join('')}</div>
+    </div>`);
+  }
+  if(!rows.length) return '';
+  return `<div class="sub-head">🔁 Training this week</div>${rows.join('')}
+    <div class="note">From your usual weekly routine — swim mornings on school days except Wednesday, gym daily. Change it in Today's Plan if a session moves.</div>
+    <div class="sub-head">📅 Meets &amp; one-offs</div>`;
+}
+
+function catBodyHtml(catId){
+  if(catId === 'exams') return examCardsHtml();
+  if(catId === 'sport') return trainingHtml() + eventRowsHtml('sport');
+  return eventRowsHtml(catId);
+}
+
+function catCount(catId){
+  if(catId === 'exams') return allExams().filter(e=>daysUntil(e.date)>=0).length;
+  return categoryItems(catId).length;
+}
+
+function renderExams(){
+  const el = document.getElementById('tab-exams');
+  const open = openCats();
+  el.innerHTML = '<h2 class="section-title">🗂️ What\'s Coming Up</h2>'
+    + '<p style="color:var(--sub); font-size:13px; margin:-8px 0 16px">Tap a category to see everything still ahead of it. Past dates drop off on their own.</p>'
+    + CATEGORIES.map(c=>{
+      const n = catCount(c.id);
+      return `<details class="cat-card" data-cat="${c.id}" ${open.includes(c.id)?'open':''}>
+        <summary>
+          <div class="cat-ic" style="background:${c.tint}">${c.icon}</div>
+          <div class="cat-name"><b>${c.label}</b><span>${c.blurb}</span></div>
+          <div class="cat-count" style="background:${c.tint}; color:${c.color}">${n}</div>
+          <div class="cat-chev">▶</div>
+        </summary>
+        <div class="cat-body">${catBodyHtml(c.id)}</div>
+      </details>`;
+    }).join('');
+
+  el.querySelectorAll('details.cat-card').forEach(d=>{
+    d.addEventListener('toggle', ()=> setCatOpen(d.dataset.cat, d.open));
+  });
 }
 
 function renderWeekMap(){
@@ -563,6 +720,9 @@ function renderWeekMap(){
 }
 
 const TUITION_COLOR = '#ec4899';
+// Swim and gym blocks in the day timeline are painted with this, which is also
+// how the Sport category finds them without duplicating the weekly schedule.
+const SPORT_COLOR = CAT.sport.color;
 
 function buildDayTimeline(dateStr){
   const d = new Date(dateStr+'T00:00:00');
@@ -581,7 +741,7 @@ function buildDayTimeline(dateStr){
       {time:'12:00–13:00', title:'Lunch & break', desc:'', color:'#94a3b8'},
       {time:'13:30–16:00', title:'Review mistakes / weak-topic drilling', desc:'Go through the paper above — understand every wrong answer.', color:SUBJECT_COLORS.History},
       {time:'16:00–17:00', title:'Free / rest / family time', desc:'Protect this — burnout undoes progress.', color:'#94a3b8'},
-      {time:'17:00–18:00', title:'🏋️ Gym', desc:'', color:'#0891b2'},
+      {time:'17:00–18:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR},
       {time:'20:00–22:00', title:'Light revision', desc:'Flashcards or formula recap, low intensity.', color:SUBJECT_COLORS.Physics},
       {time:'22:30', title:'Lights out', desc:'5am wake for swim training tomorrow if there’s school.', color:'#475569'},
     ]};
@@ -596,7 +756,7 @@ function buildDayTimeline(dateStr){
       {time:'14:15–16:00', title:'Open study block', desc:'Review tuition material or drill the nearest-exam subject.', color:SUBJECT_COLORS.History},
       {time:'16:15–18:15', title:'🀄 Chinese Tuition', desc:'', color:TUITION_COLOR},
       {time:'18:15–19:00', title:'Dinner', desc:'', color:'#94a3b8'},
-      {time:'19:00–20:00', title:'🏋️ Gym', desc:'', color:'#0891b2'},
+      {time:'19:00–20:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR},
       {time:'20:00–22:00', title:'Light revision', desc:'Flashcards or formula recap, low intensity.', color:SUBJECT_COLORS.Physics},
       {time:'22:30', title:'Lights out', desc:'5am wake for swim training tomorrow.', color:'#475569'},
     ]};
@@ -618,7 +778,7 @@ function buildDayTimeline(dateStr){
     items.push({time:'09:45–11:45', title:'Timed past-paper practice', desc:'', color:SUBJECT_COLORS.History});
     items.push({time:'11:45–12:45', title:'Lunch', desc:'', color:'#94a3b8'});
     items.push({time:'13:00–15:00', title:'Review + weak-topic drilling', desc:'Go over the past paper above.', color:SUBJECT_COLORS.Physics});
-    items.push({time:'15:00–16:00', title:'🏋️ Gym', desc:'', color:'#0891b2'});
+    items.push({time:'15:00–16:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR});
     items.push({time:'16:00–18:00', title:'Deep-focus study block 2', desc:'Second subject, or continue weakest topic.', color:SUBJECT_COLORS.Chemistry});
     items.push({time:'18:00–19:00', title:'Dinner', desc:'', color:'#94a3b8'});
     items.push({time:'19:30–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Mathematics});
@@ -628,7 +788,7 @@ function buildDayTimeline(dateStr){
     if(weekday==='wed'){
       items.push({time:'05:00–07:00', title:'Free morning', desc:'No swim training on Wednesdays.', color:'#94a3b8'});
     } else {
-      items.push({time:'05:30–07:00', title:'🏊 Swim training', desc:'', color:'#0891b2'});
+      items.push({time:'05:30–07:00', title:'🏊 Swim training', desc:'', color:SPORT_COLOR});
     }
     items.push({time:'07:00–08:00', title:'Travel & breakfast', desc:'', color:'#94a3b8'});
     items.push({time:'08:00–~15:15', title:'School (regular lessons)', desc:override?override.note:'Freed and study-block periods below are highlighted.', color:'#cbd5e1'});
@@ -646,20 +806,20 @@ function buildDayTimeline(dateStr){
       items.push({time:'16:00–16:30', title:'Afternoon study block', desc:'Short session before tuition.', color:SUBJECT_COLORS.History});
       items.push({time:'16:30–18:00', title:'📐 Math Tuition', desc:'End time estimated — adjust if it differs.', color:TUITION_COLOR});
       items.push({time:'18:00–19:00', title:'Dinner', desc:'', color:'#94a3b8'});
-      items.push({time:'19:00–20:00', title:'🏋️ Gym', desc:'', color:'#0891b2'});
+      items.push({time:'19:00–20:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR});
       items.push({time:'20:00–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Chemistry});
       items.push({time:'22:00–22:30', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
       items.push({time:'22:30', title:'😴 Lights out', desc:'Non-negotiable given the 5am wake.', color:'#1e293b'});
     } else if(weekday==='fri'){
       items.push({time:'16:00–18:00', title:'Afternoon study block', desc:'Nearest-exam subject priority.', color:SUBJECT_COLORS.History});
-      items.push({time:'18:00–19:00', title:'🏋️ Gym', desc:'', color:'#0891b2'});
+      items.push({time:'18:00–19:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR});
       items.push({time:'19:00–21:00', title:'⚛️ Physics Tuition', desc:'Bring a snack — straight from the gym.', color:TUITION_COLOR});
       items.push({time:'21:00–21:45', title:'Dinner', desc:'Later than usual on Fridays.', color:'#94a3b8'});
       items.push({time:'21:45–22:00', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
       items.push({time:'22:00', title:'😴 Lights out', desc:'A little earlier than other nights since Physics Tuition runs late — catch up on sleep over the weekend.', color:'#1e293b'});
     } else {
       items.push({time:'16:00–18:00', title:'Afternoon study block', desc:'Nearest-exam subject priority.', color:SUBJECT_COLORS.History});
-      items.push({time:'18:00–19:00', title:'🏋️ Gym', desc:'', color:'#0891b2'});
+      items.push({time:'18:00–19:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR});
       items.push({time:'19:00–19:30', title:'Dinner', desc:'', color:'#94a3b8'});
       items.push({time:'19:30–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Chemistry});
       items.push({time:'22:00–22:30', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
@@ -760,12 +920,13 @@ function renderTopics(){
 }
 
 // ---- My Entries tab ----
-const KIND_META = {
-  exam:  {icon:'🎯', label:'Exam',     noun:'exam'},
-  event: {icon:'📌', label:'Event',    noun:'event'},
-  note:  {icon:'📝', label:'Reminder', noun:'reminder'},
+const PLACEHOLDERS = {
+  important: "e.g. CCA meeting, project deadline, parent-teacher meeting",
+  social:    "e.g. Ella's birthday dinner, movie with Qingyang",
+  sport:     "e.g. Extra gym session, time trial, away meet",
+  other:     "e.g. Hand in Chem practical write-up",
 };
-const BLANK_ENTRY = {kind:'exam', id:null, title:'', code:'', date:'', time:'', weight:'', topics:'', detail:''};
+const BLANK_ENTRY = {kind:'exams', id:null, title:'', code:'', date:'', time:'', weight:'', topics:'', detail:''};
 let entryForm = {...BLANK_ENTRY};
 let entryError = '';
 let builtinsOpen = false;  // kept across re-renders so hiding an exam doesn't collapse the list
@@ -779,12 +940,12 @@ function refreshEverything(){
 
 function entryFormHtml(){
   const f = entryForm;
-  const seg = Object.entries(KIND_META).map(([k,m])=>
-    `<button type="button" data-kind="${k}" class="${f.kind===k?'active':''}">${m.icon} ${m.label}</button>`
+  const seg = CATEGORIES.map(c=>
+    `<button type="button" data-kind="${c.id}" class="${f.kind===c.id?'active':''}">${c.icon} ${c.label}</button>`
   ).join('');
 
   let fields = '';
-  if(f.kind==='exam'){
+  if(f.kind==='exams'){
     fields = `
       <div class="form-row">
         <div class="field"><label for="fTitle">Subject</label>
@@ -802,11 +963,25 @@ function entryFormHtml(){
         <div class="field"><label for="fTopics">Topics (optional, separate with commas)</label>
           <input id="fTopics" value="${esc(f.topics)}" placeholder="Cells, Genetics, Ecology"></div>
       </div>`;
-  } else if(f.kind==='event'){
+  } else if(f.kind==='other'){
+    fields = `
+      <div class="form-row">
+        <div class="field"><label for="fTitle">Reminder</label>
+          <input id="fTitle" value="${esc(f.title)}" placeholder="${PLACEHOLDERS.other}"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="fDate">Date (optional — leave blank to just keep it on this list)</label>
+          <input id="fDate" type="date" value="${esc(f.date)}"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label for="fDetail">Notes (optional)</label>
+          <textarea id="fDetail" placeholder="Any details">${esc(f.detail)}</textarea></div>
+      </div>`;
+  } else {
     fields = `
       <div class="form-row">
         <div class="field"><label for="fTitle">What's happening</label>
-          <input id="fTitle" value="${esc(f.title)}" placeholder="e.g. Swim meet, dentist, Ella's party"></div>
+          <input id="fTitle" value="${esc(f.title)}" placeholder="${PLACEHOLDERS[f.kind]}"></div>
       </div>
       <div class="form-row">
         <div class="field"><label for="fDate">Date</label>
@@ -817,20 +992,6 @@ function entryFormHtml(){
       <div class="form-row">
         <div class="field"><label for="fDetail">Notes (optional)</label>
           <textarea id="fDetail" placeholder="Anything you want to remember">${esc(f.detail)}</textarea></div>
-      </div>`;
-  } else {
-    fields = `
-      <div class="form-row">
-        <div class="field"><label for="fTitle">Reminder</label>
-          <input id="fTitle" value="${esc(f.title)}" placeholder="e.g. Hand in Chem practical write-up"></div>
-      </div>
-      <div class="form-row">
-        <div class="field"><label for="fDate">Date (optional — leave blank to just keep it on this list)</label>
-          <input id="fDate" type="date" value="${esc(f.date)}"></div>
-      </div>
-      <div class="form-row">
-        <div class="field"><label for="fDetail">Notes (optional)</label>
-          <textarea id="fDetail" placeholder="Any details">${esc(f.detail)}</textarea></div>
       </div>`;
   }
 
@@ -857,14 +1018,14 @@ function entryListHtml(){
       <div class="empty">Nothing added yet. Anything you add above shows up here, and on the right day in Today's Plan.</div></div>`;
   }
   const rows = items.map(x=>{
-    const m = KIND_META[x.kind] || KIND_META.note;
+    const m = CAT[x.kind] || CAT.other;
     const past = x.date && daysUntil(x.date) < 0;
     const when = x.date
       ? `${fmtDateShort(x.date)}${x.time?` · ${x.time}`:''}${past?' · done':` · in ${daysUntil(x.date)}d`}`
       : 'no date';
     const extra = [
-      x.kind==='exam' && x.code ? esc(x.code) : '',
-      x.kind==='exam' && x.weight!=='' && x.weight!=null ? `${esc(x.weight)}%` : '',
+      x.kind==='exams' && x.code ? esc(x.code) : '',
+      x.kind==='exams' && x.weight!=='' && x.weight!=null ? `${esc(x.weight)}%` : '',
       x.detail ? esc(x.detail) : '',
       (x.topics||[]).length ? (x.topics||[]).map(esc).join(', ') : '',
     ].filter(Boolean).join(' · ');
@@ -972,19 +1133,19 @@ function saveEntry(){
   readFormInputs();
   const f = entryForm;
   const title = f.title.trim();
-  if(!title){ entryError = `Give this ${KIND_META[f.kind].noun} a name first.`; return renderMine(); }
-  if(f.kind !== 'note' && !f.date){ entryError = 'Pick a date.'; return renderMine(); }
+  if(!title){ entryError = `Give this ${CAT[f.kind].noun} a name first.`; return renderMine(); }
+  if(f.kind !== 'other' && !f.date){ entryError = 'Pick a date.'; return renderMine(); }
 
   const entry = {
     id: f.id || (Date.now().toString(36) + Math.random().toString(36).slice(2,7)),
     kind: f.kind,
     title,
     date: f.date || '',
-    time: f.kind==='event' ? (f.time||'') : '',
-    code: f.kind==='exam' ? f.code.trim() : '',
-    weight: f.kind==='exam' && f.weight!=='' ? Number(f.weight) : null,
-    topics: f.kind==='exam' ? f.topics.split(',').map(t=>t.trim()).filter(Boolean) : [],
-    detail: f.kind==='exam' ? '' : f.detail.trim(),
+    time: (f.kind==='exams' || f.kind==='other') ? '' : (f.time||''),
+    code: f.kind==='exams' ? f.code.trim() : '',
+    weight: f.kind==='exams' && f.weight!=='' ? Number(f.weight) : null,
+    topics: f.kind==='exams' ? f.topics.split(',').map(t=>t.trim()).filter(Boolean) : [],
+    detail: f.kind==='exams' ? '' : f.detail.trim(),
   };
 
   const list = loadCustom();
@@ -1048,7 +1209,7 @@ renderExams();
 renderWeekMap();
 renderTopics();
 renderMine();
-const todayStr = new Date().toISOString().slice(0,10);
+const todayStr = todayISO();
 const initDate = (todayStr >= MIN_DATE && todayStr <= MAX_DATE) ? todayStr : MIN_DATE;
 renderToday(initDate);
 </script>
