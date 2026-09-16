@@ -262,7 +262,11 @@ const SUBJECT_COLORS = {Mathematics:'var(--math)', History:'var(--hist)', Physic
 // ---- Push notifications ----
 // Replace PUSH_SERVER with your deployed Cloudflare Worker URL (e.g. https://yourworker.yourname.workers.dev)
 const PUSH_SERVER = 'https://personalplanner.myra-phua10.workers.dev';
-const VAPID_PUBLIC_KEY = 'BEQuD4lHWzfKajYrSCjY1ps0GVczBVZKq8JFfCu8ljai3Pv56dnWnJeHLr3N2iSd6AezXJ8BIqpothcvtHH_jc0';
+// Rotated Sept 2026: the private half of the previous pair was stored as a
+// Cloudflare Secret and could no longer be read back, so a new pair was
+// generated. ensureSubscription() below re-subscribes any device still holding
+// a subscription bound to the old key.
+const VAPID_PUBLIC_KEY = 'BJkEOcKBLc7XWwbIjscx6SvGs-C8QyTgJdSHLuT0CDfTa0qK0Kaxi1nR6Rc08Ags6WGKg44ckPzeK1MlIT8xs7M';
 
 function urlBase64ToUint8Array(base64String){
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -271,6 +275,28 @@ function urlBase64ToUint8Array(base64String){
   const outputArray = new Uint8Array(rawData.length);
   for(let i=0;i<rawData.length;i++) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
+}
+
+// A push subscription is welded to the VAPID key it was created with. If that
+// key is ever rotated, the subscription sitting in the browser still points at
+// the old one and every push signed with the new key is rejected — silently,
+// from the app's point of view. So compare before reusing, and start again if
+// they differ.
+async function ensureSubscription(reg){
+  const wanted = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+  let sub = await reg.pushManager.getSubscription();
+  if(sub){
+    const current = new Uint8Array(sub.options && sub.options.applicationServerKey || new ArrayBuffer(0));
+    const matches = current.length === wanted.length && current.every((b,i)=> b === wanted[i]);
+    if(!matches){
+      try{ await sub.unsubscribe(); }catch(err){ /* replaced below regardless */ }
+      sub = null;
+    }
+  }
+  if(!sub){
+    sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey: wanted});
+  }
+  return sub;
 }
 
 async function enableNotifications(){
@@ -296,13 +322,7 @@ async function enableNotifications(){
       statusEl.textContent = 'Notifications permission was not granted.';
       return;
     }
-    let sub = await reg.pushManager.getSubscription();
-    if(!sub){
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-    }
+    const sub = await ensureSubscription(reg);
     await fetch(PUSH_SERVER + '/subscribe', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
@@ -1299,13 +1319,7 @@ async function enableReminders(){
     const perm = await Notification.requestPermission();
     if(perm !== 'granted') throw new Error('Notifications were blocked. Turn them on for this site in your browser settings.');
 
-    let sub = await reg.pushManager.getSubscription();
-    if(!sub){
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-    }
+    const sub = await ensureSubscription(reg);
     const res = await fetch('/api/push-subscribe', {
       method:'POST', headers:{'content-type':'application/json'},
       body: JSON.stringify({

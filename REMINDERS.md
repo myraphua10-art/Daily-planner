@@ -19,6 +19,8 @@ npx web-push generate-vapid-keys
 ```
 
 and paste the new **public** key into `VAPID_PUBLIC_KEY` in `index.html`.
+(This was done in Sept 2026 — the original private key had been stored as a
+Cloudflare Secret and could not be read back.)
 Anyone already subscribed will need to tap "Turn on reminders" again.
 
 Then set all three as Worker secrets:
