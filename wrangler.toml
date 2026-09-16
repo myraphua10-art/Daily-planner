@@ -13,6 +13,17 @@ binding = "ASSETS"
 binding = "ASSASSIN_KV"
 id = "c47c1406dc294c23868a296d9ec5b39a"
 
+# Checks every 15 minutes whether a planner reminder is due. Reminder times are
+# stored per-device in the user's own time zone, so this only has to run often
+# enough to catch them, not at any particular hour.
+[triggers]
+crons = ["*/15 * * * *"]
+
 # ADMIN_PASSCODE is set as a secret via the dashboard (Worker -> Settings ->
 # Variables and Secrets), not here - so it never ends up in the repo.
+#
+# Reminders also need these three secrets (see the README section on reminders):
+#   VAPID_PUBLIC_KEY   VAPID_PRIVATE_KEY   VAPID_SUBJECT
+# Without them the Worker still runs; reminders just stay switched off and the
+# app says so.
 # (redeploy trigger 2026-07-01T14:44:42Z)

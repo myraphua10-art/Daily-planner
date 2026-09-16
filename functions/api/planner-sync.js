@@ -42,9 +42,16 @@ async function codeKey(code) {
   return `planner-sync:${hex}`;
 }
 
-// Keep this in step with mergeDoc() in index.html — the client merges the same
-// way locally so it can work offline and still converge.
-const SECTIONS = ["entries", "hidden", "topics"];
+// Keep this in step with SECTIONS/mergeDoc() in index.html — the client merges
+// the same way locally so it can work offline and still converge. A section
+// missing from this list is silently dropped on every sync, so anything added
+// on the client has to be added here too.
+//   entries  – things typed into the planner, one item per id
+//   hidden   – built-in exams switched off, one item per exam
+//   topics   – topic-tracker ticks, one item per topic
+//   settings – reminder preferences, one item per setting
+//   snapshot – the calendar the reminder cron reads (single item, "cal")
+const SECTIONS = ["entries", "hidden", "topics", "settings", "snapshot"];
 
 function mergeSection(mine, theirs) {
   const out = { ...(mine || {}) };

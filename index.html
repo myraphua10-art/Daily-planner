@@ -173,6 +173,14 @@
   .btn.small{font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:9px;}
   .btn.danger{background:#fee2e2; color:#991b1b;}
   .form-err{font-size:12.5px; color:#b91c1c; margin-top:2px;}
+  .chip-toggle{
+    font:inherit; font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:20px; cursor:pointer;
+    border:1px solid var(--line); background:#fff; color:var(--sub); margin:0;
+  }
+  .chip-toggle.on{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
+  .remind-row{padding:10px 0; border-top:1px solid var(--line);}
+  .remind-name{font-size:13.5px; font-weight:600; margin-bottom:7px;}
   .code-box{
     display:flex; align-items:center; gap:10px; background:#f6f7fc; border:1px solid var(--line);
     border-radius:11px; padding:10px 12px;
@@ -228,7 +236,7 @@
     </div>
     <div class="install-banner" id="notifBanner" style="cursor:pointer;">
       <span style="font-size:20px">🔔</span>
-      <div><b id="notifTitle">Enable Notifications</b><span id="notifStatus">Tap to get reminders for swim, gym, tuition and study blocks.</span></div>
+      <div><b id="notifTitle">Timetable reminders</b><span id="notifStatus">Tap to get nudges for swim, gym, tuition and study blocks. Exam and event reminders are set up in the ➕ tab.</span></div>
     </div>
     <div class="countdown-bar" id="countdownBar"></div>
 
@@ -300,8 +308,8 @@ async function enableNotifications(){
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(sub),
     });
-    titleEl.textContent = '🔔 Notifications enabled';
-    statusEl.textContent = "You'll get reminders for swim, gym, tuition and study blocks.";
+    titleEl.textContent = '🔔 Timetable reminders on';
+    statusEl.textContent = "You'll get nudges for swim, gym, tuition and study blocks.";
   } catch(err){
     statusEl.textContent = 'Something went wrong enabling notifications: ' + err.message;
   }
@@ -484,7 +492,11 @@ const WEEKDAY_LABEL = {mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursd
 // by the merge. They're dropped after 90 days.
 const DOC_KEY = 'planner-doc-v1';
 const TOMBSTONE_TTL = 90 * 86400000;
-const SECTIONS = ['entries','hidden','topics'];
+// `settings` holds reminder preferences, one item per setting so two devices
+// can change different settings without one losing. `snapshot` is a single
+// item: a plain list of what's coming up, written for the Worker's benefit so
+// the cron job can send reminders without knowing the timetable.
+const SECTIONS = ['entries','hidden','topics','settings','snapshot'];
 
 function readList(key){
   try{ const a = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(a) ? a : []; }
@@ -497,7 +509,7 @@ function writeList(key, list){
 
 let doc = null;
 
-function blankDoc(){ return {entries:{}, hidden:{}, topics:{}}; }
+function blankDoc(){ return {entries:{}, hidden:{}, topics:{}, settings:{}, snapshot:{}}; }
 
 function loadDoc(){
   if(doc) return doc;
@@ -588,6 +600,53 @@ function topicDone(key){
 function setTopicDone(key, done){
   loadDoc().topics[key] = {done, updatedAt: Date.now()};
   saveDoc();
+}
+function getSetting(key, fallback){
+  const s = loadDoc().settings[key];
+  return (s && s.value !== undefined && s.value !== null) ? s.value : fallback;
+}
+function setSetting(key, value){
+  loadDoc().settings[key] = {value, updatedAt: Date.now()};
+  saveDoc();
+}
+
+// ---- Calendar snapshot ----
+// The reminder cron runs on the Worker, which has no idea what EXAMS or EVENTS
+// contain — those only exist in this file. So the effective calendar (built-in
+// exams minus hidden ones, built-in events, and hand-added entries) is written
+// into the synced document for it to read. Titles are raw here, not escaped:
+// they end up in a notification, not in HTML.
+const SNAPSHOT_DAYS = 120;
+function buildSnapshot(){
+  const today = todayISO(), horizon = addDays(today, SNAPSHOT_DAYS);
+  const hidden = loadHidden();
+  const items = [];
+  const within = d => d && d >= today && d <= horizon;
+
+  EXAMS.forEach(e=>{
+    if(hidden.includes(builtinKey(e)) || !within(e.date)) return;
+    items.push({id:'exam:'+builtinKey(e), kind:'exams', title:`${e.subject} — ${e.code}`, date:e.date, time:''});
+  });
+  Object.entries(EVENTS).forEach(([date, list])=>{
+    if(!within(date)) return;
+    list.forEach((ev,i)=> items.push({id:`ev:${date}:${i}`, kind:ev.cat||'important', title:ev.text, date, time:''}));
+  });
+  loadCustom().forEach(x=>{
+    if(!within(x.date)) return;
+    const it = {id:x.id, kind:x.kind, title:x.title, date:x.date, time:x.time||''};
+    if(Array.isArray(x.remind)) it.remind = x.remind;
+    items.push(it);
+  });
+
+  return items.sort((a,b)=> a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+}
+function refreshSnapshot(){
+  const d = loadDoc();
+  const items = buildSnapshot();
+  const prev = d.snapshot.cal;
+  if(prev && JSON.stringify(prev.value) === JSON.stringify(items)) return false;
+  d.snapshot.cal = {value: items, updatedAt: Date.now()};
+  return true;
 }
 
 // Built-in exams are identified by their content, not an index, so hiding one
@@ -1056,6 +1115,7 @@ async function syncNow(){
   try{
     loadDoc();
     pruneTombstones();
+    if(refreshSnapshot()) saveDoc({sync:false});
     const res = await fetch(SYNC_URL, {
       method:'POST',
       headers:{'content-type':'application/json'},
@@ -1190,6 +1250,185 @@ function renderSyncCard(){
   });
 }
 
+// ---- Reminders ----
+// Scheduling happens on the Worker (functions/reminders.js) so notifications
+// arrive whether or not the app is open. This side handles the subscription and
+// the preferences, both of which ride along with sync.
+const OFFSETS = [
+  {id:'1w', label:'A week before'},
+  {id:'3d', label:'3 days before'},
+  {id:'1d', label:'Day before'},
+  {id:'0d', label:'On the day'},
+  {id:'1h', label:'An hour before', needsTime:true},
+];
+const DEFAULT_OFFSETS = {
+  exams:['1w','1d','0d'], important:['1d','0d'], social:['1d'], sport:['0d'], other:['0d'],
+};
+const remindKey = catId => `remind.${catId}`;
+const offsetsFor = catId => getSetting(remindKey(catId), DEFAULT_OFFSETS[catId] || ['1d']);
+
+let pushState = {sub:null, busy:false, msg:'', ok:''};
+
+function notificationsSupported(){
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+async function currentPushSub(){
+  if(!notificationsSupported()) return null;
+  try{
+    const reg = await navigator.serviceWorker.getRegistration();
+    return reg ? await reg.pushManager.getSubscription() : null;
+  }catch(err){ return null; }
+}
+
+async function enableReminders(){
+  pushState = {...pushState, busy:true, msg:'', ok:''};
+  renderReminderCard();
+  try{
+    if(!notificationsSupported()) throw new Error('This browser can\'t do notifications.');
+    if(/iPhone|iPad|iPod/.test(navigator.userAgent) && window.navigator.standalone !== true){
+      throw new Error('On iPhone, add the planner to your Home Screen first, open it from that icon, then turn reminders on.');
+    }
+    // Reminders are sent from wherever the planner is stored, so they need sync.
+    if(!syncCode()){
+      setSyncCode(newSyncCode());
+      await syncNow();
+    }
+    const reg = await navigator.serviceWorker.register('sw.js');
+    await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if(perm !== 'granted') throw new Error('Notifications were blocked. Turn them on for this site in your browser settings.');
+
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+    const res = await fetch('/api/push-subscribe', {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({
+        code: syncCode(),
+        subscription: sub.toJSON(),
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      }),
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error || `Server said ${res.status}.`);
+    pushState = {sub, busy:false, msg:'', ok: data.configured === false
+      ? 'Registered — but the server still needs its notification keys before anything can send.'
+      : 'Reminders are on for this device.'};
+    await syncNow();
+  }catch(err){
+    pushState = {...pushState, busy:false, msg: err.message || 'Could not turn reminders on.'};
+  }
+  renderReminderCard();
+}
+
+async function disableReminders(){
+  const sub = await currentPushSub();
+  if(sub){
+    try{
+      await fetch('/api/push-subscribe', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({code: syncCode() || 'aaaaaaaa', endpoint: sub.endpoint, unsubscribe:true}),
+      });
+    }catch(err){ /* the local unsubscribe below is what actually stops them */ }
+    try{ await sub.unsubscribe(); }catch(err){}
+  }
+  pushState = {sub:null, busy:false, msg:'', ok:'Reminders are off on this device.'};
+  renderReminderCard();
+}
+
+async function sendTestReminder(){
+  pushState = {...pushState, busy:true, msg:'', ok:''};
+  renderReminderCard();
+  try{
+    const sub = await currentPushSub();
+    if(!sub) throw new Error('Turn reminders on first.');
+    const res = await fetch('/api/push-test', {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({code: syncCode(), endpoint: sub.endpoint}),
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.error || `Server said ${res.status}.`);
+    pushState = {...pushState, busy:false, ok:'Sent — it should arrive in a few seconds.'};
+  }catch(err){
+    pushState = {...pushState, busy:false, msg: err.message || 'Could not send a test.'};
+  }
+  renderReminderCard();
+}
+
+function reminderCardHtml(){
+  const on = Boolean(pushState.sub);
+  const rows = CATEGORIES.map(c=>{
+    const picked = offsetsFor(c.id);
+    const chips = OFFSETS.map(o=>`<button type="button" class="chip-toggle ${picked.includes(o.id)?'on':''}"
+      data-remind="${c.id}" data-off="${o.id}">${o.label}</button>`).join('');
+    return `<div class="remind-row">
+      <div class="remind-name">${c.icon} ${c.label}</div>
+      <div class="chip-row">${chips}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="card">
+    <h3 style="margin:0 0 4px; font-size:16px">${on ? '🔔 Reminders are on' : '🔕 Reminders are off'}</h3>
+    <div class="exam-meta">${on
+      ? 'This device gets a notification before the things you pick below. Timings are shared with your other devices.'
+      : 'Get a notification before exams, deadlines and anything else you add.'}</div>
+    ${pushState.msg ? `<div class="form-err" style="margin-top:8px">${esc(pushState.msg)}</div>` : ''}
+    ${pushState.ok ? `<div style="font-size:12.5px; color:#047857; margin-top:8px">${esc(pushState.ok)}</div>` : ''}
+    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
+      ${on
+        ? `<button class="btn ghost small" id="testPush" ${pushState.busy?'disabled':''}>Send a test</button>
+           <button class="btn danger small" id="offPush">Turn off on this device</button>`
+        : `<button class="btn" id="onPush" ${pushState.busy?'disabled':''}>${pushState.busy?'Working…':'Turn on reminders'}</button>`}
+    </div>
+
+    <div class="sub-head" style="padding-top:18px">When to remind me</div>
+    ${rows}
+
+    <div class="form-row" style="margin-top:14px">
+      <div class="field"><label for="remTime">Day-ahead reminders arrive at</label>
+        <input id="remTime" type="time" value="${esc(getSetting('remind.time','07:00'))}"></div>
+      <div class="field"><label for="digTime">Daily summary at</label>
+        <input id="digTime" type="time" value="${esc(getSetting('remind.digestTime','07:00'))}" ${getSetting('remind.digest',false)?'':'disabled'}></div>
+    </div>
+    <label class="topic-row" style="padding-top:0">
+      <input type="checkbox" id="digOn" ${getSetting('remind.digest',false)?'checked':''}>
+      <span>Every morning, list what's on that day</span>
+    </label>
+    <div class="note">"An hour before" only applies to things you've given a time to.</div>
+  </div>`;
+}
+
+function renderReminderCard(){
+  const host = document.getElementById('reminderCard');
+  if(!host) return;
+  host.innerHTML = reminderCardHtml();
+
+  host.querySelectorAll('[data-remind]').forEach(b=>b.addEventListener('click', ()=>{
+    const cat = b.dataset.remind, off = b.dataset.off;
+    const cur = offsetsFor(cat);
+    const next = cur.includes(off) ? cur.filter(o=>o!==off) : [...cur, off];
+    setSetting(remindKey(cat), next);
+    renderReminderCard();
+  }));
+
+  const time = host.querySelector('#remTime');
+  if(time) time.addEventListener('change', ()=> setSetting('remind.time', time.value || '07:00'));
+  const digTime = host.querySelector('#digTime');
+  if(digTime) digTime.addEventListener('change', ()=> setSetting('remind.digestTime', digTime.value || '07:00'));
+  const digOn = host.querySelector('#digOn');
+  if(digOn) digOn.addEventListener('change', ()=>{ setSetting('remind.digest', digOn.checked); renderReminderCard(); });
+
+  const on = (id, fn)=>{ const n = host.querySelector('#'+id); if(n) n.addEventListener('click', fn); };
+  on('onPush', enableReminders);
+  on('offPush', disableReminders);
+  on('testPush', sendTestReminder);
+}
+
 // ---- My Entries tab ----
 const PLACEHOLDERS = {
   important: "e.g. CCA meeting, project deadline, parent-teacher meeting",
@@ -1267,10 +1506,24 @@ function entryFormHtml(){
       </div>`;
   }
 
+  // Per-entry reminder override. Left alone, the entry just follows whatever
+  // its category is set to in the Reminders card.
+  const custom = Array.isArray(f.remind);
+  const chips = OFFSETS.map(o=>`<button type="button" class="chip-toggle ${custom && f.remind.includes(o.id)?'on':''}"
+    data-entryoff="${o.id}" ${custom?'':'disabled style="opacity:.45"'}>${o.label}</button>`).join('');
+  const remindBlock = `
+    <div class="sub-head" style="padding-top:14px">Remind me</div>
+    <label class="topic-row" style="padding:4px 2px">
+      <input type="checkbox" id="fRemindCustom" ${custom?'checked':''}>
+      <span>Set a reminder just for this${custom?'' : ` — otherwise it follows ${CAT[f.kind].label}'s setting`}</span>
+    </label>
+    <div class="chip-row" style="margin-top:6px">${chips}</div>`;
+
   return `<div class="card">
     <h3 style="margin:0 0 12px; font-size:16px">${f.id ? '✏️ Edit entry' : '➕ Add something'}</h3>
     <div class="seg">${seg}</div>
     ${fields}
+    ${remindBlock}
     ${entryError ? `<div class="form-err">${esc(entryError)}</div>` : ''}
     <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap">
       <button class="btn" id="saveEntry">${f.id ? 'Save changes' : 'Add to planner'}</button>
@@ -1346,7 +1599,9 @@ function renderMine(){
     + entryFormHtml()
     + entryListHtml()
     + builtinListHtml()
+    + '<div id="reminderCard"></div>'
     + '<div id="syncCard"></div>';
+  renderReminderCard();
   renderSyncCard();
 
   const det = el.querySelector('details.builtins');
@@ -1356,6 +1611,24 @@ function renderMine(){
     readFormInputs();
     entryForm.kind = b.dataset.kind;
     entryError = '';
+    renderMine();
+  }));
+
+  const remindCustom = el.querySelector('#fRemindCustom');
+  if(remindCustom) remindCustom.addEventListener('change', ()=>{
+    readFormInputs();
+    entryForm.remind = remindCustom.checked
+      ? (offsetsFor(entryForm.kind) || []).slice()   // start from the category's setting
+      : undefined;
+    renderMine();
+  });
+  el.querySelectorAll('[data-entryoff]').forEach(b=>b.addEventListener('click', ()=>{
+    if(!Array.isArray(entryForm.remind)) return;
+    readFormInputs();
+    const off = b.dataset.entryoff;
+    entryForm.remind = entryForm.remind.includes(off)
+      ? entryForm.remind.filter(o=>o!==off)
+      : [...entryForm.remind, off];
     renderMine();
   }));
 
@@ -1370,6 +1643,7 @@ function renderMine(){
     entryForm = {
       kind:x.kind, id:x.id, title:x.title||'', code:x.code||'', date:x.date||'',
       time:x.time||'', weight:(x.weight==null?'':x.weight), topics:(x.topics||[]).join(', '), detail:x.detail||'',
+      remind: Array.isArray(x.remind) ? x.remind.slice() : undefined,
     };
     entryError = '';
     renderMine();
@@ -1418,6 +1692,7 @@ function saveEntry(){
     topics: f.kind==='exams' ? f.topics.split(',').map(t=>t.trim()).filter(Boolean) : [],
     detail: f.kind==='exams' ? '' : f.detail.trim(),
   };
+  if(Array.isArray(f.remind)) entry.remind = f.remind;
 
   upsertEntry(entry);
 
@@ -1464,8 +1739,8 @@ if('serviceWorker' in navigator && 'PushManager' in window){
   navigator.serviceWorker.getRegistration().then(reg=>{
     if(reg) return reg.pushManager.getSubscription().then(sub=>{
       if(sub){
-        document.getElementById('notifTitle').textContent = '🔔 Notifications enabled';
-        document.getElementById('notifStatus').textContent = "You'll get reminders for swim, gym, tuition and study blocks.";
+        document.getElementById('notifTitle').textContent = '🔔 Timetable reminders on';
+        document.getElementById('notifStatus').textContent = "You'll get nudges for swim, gym, tuition and study blocks.";
       }
     });
   });
@@ -1484,6 +1759,9 @@ renderToday(initDate);
 
 // Pull anything the other device changed: on open, whenever the app is brought
 // back to the foreground, and when the connection returns.
+// Reflect whether this device is already subscribed to reminders.
+currentPushSub().then(sub=>{ if(sub){ pushState = {...pushState, sub}; renderReminderCard(); } });
+
 if(syncCode()) syncNow();
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) syncNow(); });
 window.addEventListener('online', syncNow);

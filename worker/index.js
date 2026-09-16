@@ -23,6 +23,12 @@ import { onRequestGet as menuGet } from "../functions/api/menu.js";
 import { onRequestPost as submitMenuPost } from "../functions/api/submit-menu.js";
 import { onRequestPost as adminMenuPost } from "../functions/api/admin-menu.js";
 import { onRequestPost as plannerSyncPost, onRequestOptions as plannerSyncOptions } from "../functions/api/planner-sync.js";
+import {
+  onRequestPost as pushNotifyPost,
+  onRequestOptions as pushNotifyOptions,
+  onRequestPostRun as pushRunPost,
+} from "../functions/api/push-notify.js";
+import { runReminders } from "../functions/reminders.js";
 
 const routes = {
   "GET /api/game": gameGet,
@@ -53,6 +59,13 @@ const routes = {
   // Exam planner (root index.html), not the assassin game.
   "POST /api/planner-sync": plannerSyncPost,
   "OPTIONS /api/planner-sync": plannerSyncOptions,
+  "POST /api/push-subscribe": pushNotifyPost,
+  "OPTIONS /api/push-subscribe": pushNotifyOptions,
+  "POST /api/pending-notification": pushNotifyPost,
+  "OPTIONS /api/pending-notification": pushNotifyOptions,
+  "POST /api/push-test": pushNotifyPost,
+  "OPTIONS /api/push-test": pushNotifyOptions,
+  "POST /api/push-run": pushRunPost,
 };
 
 export default {
@@ -65,5 +78,11 @@ export default {
     }
 
     return env.ASSETS.fetch(request);
+  },
+
+  // Cron trigger (see [triggers] in wrangler.toml) — checks whether any planner
+  // reminders are due and pushes them.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runReminders(env, Date.now()));
   },
 };
