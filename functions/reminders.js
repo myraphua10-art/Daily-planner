@@ -141,19 +141,61 @@ export async function sha256hex(text){
   return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
+// Pasting a key into a dashboard field very easily picks up a newline, a stray
+// space, or quotes. Strip all of that before anything tries to decode it.
+export function cleanKey(raw){
+  return String(raw == null ? '' : raw).trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
+}
+
 // The public key is the uncompressed P-256 point (0x04 ‖ X ‖ Y); the private key
 // is the raw scalar. Together they make the JWK WebCrypto wants.
 export async function importVapidKey(publicKey, privateKey){
-  const pub = b64uToBytes(publicKey);
-  if(pub.length !== 65 || pub[0] !== 4) throw new Error('VAPID public key is not a raw P-256 point.');
+  const pubRaw = cleanKey(publicKey);
+  const privRaw = cleanKey(privateKey);
+  if(!pubRaw) throw new Error('VAPID_PUBLIC_KEY is empty.');
+  if(!privRaw) throw new Error('VAPID_PRIVATE_KEY is empty.');
+
+  const pub = b64uToBytes(pubRaw);
+  if(pub.length !== 65 || pub[0] !== 4){
+    throw new Error(`VAPID_PUBLIC_KEY should decode to 65 bytes starting with 0x04, but got ${pub.length} bytes — check it was pasted whole.`);
+  }
+  const priv = b64uToBytes(privRaw);
+  if(priv.length !== 32){
+    throw new Error(`VAPID_PRIVATE_KEY should decode to 32 bytes, but got ${priv.length} — the public and private keys may have been swapped.`);
+  }
+
   const jwk = {
     kty:'EC', crv:'P-256',
     x: bytesToB64u(pub.slice(1,33)),
     y: bytesToB64u(pub.slice(33,65)),
-    d: String(privateKey).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),
+    d: bytesToB64u(priv),
     ext:true,
   };
-  return crypto.subtle.importKey('jwk', jwk, {name:'ECDSA', namedCurve:'P-256'}, false, ['sign']);
+  try{
+    return await crypto.subtle.importKey('jwk', jwk, {name:'ECDSA', namedCurve:'P-256'}, false, ['sign']);
+  }catch(err){
+    throw new Error('The VAPID keys are not a matching pair — the private key does not go with this public key.');
+  }
+}
+
+// Checks the key material without sending anything, so a bad paste reports
+// itself instead of surfacing as "could not reach the push service".
+export async function verifyVapidKeys(env){
+  if(!env.VAPID_PUBLIC_KEY && !env.VAPID_PRIVATE_KEY){
+    return {ok:false, error:'Neither VAPID key is set on the Worker.'};
+  }
+  try{
+    const key = await importVapidKey(env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
+    // Signing proves the pair actually works, not just that it parsed.
+    await crypto.subtle.sign({name:'ECDSA', hash:'SHA-256'}, key, new TextEncoder().encode('check'));
+  }catch(err){
+    return {ok:false, error: err.message};
+  }
+  const sub = String(env.VAPID_SUBJECT || '');
+  if(!/^(mailto:|https:)/.test(sub)){
+    return {ok:false, error:'VAPID_SUBJECT must start with "mailto:" or "https:" — push services reject anything else.'};
+  }
+  return {ok:true};
 }
 
 export async function vapidJwt(audience, env, nowMs = Date.now()){
@@ -172,18 +214,33 @@ export async function vapidJwt(audience, env, nowMs = Date.now()){
 }
 
 // An empty push. The service worker fetches the text once it wakes up.
+// Returns {status, error, detail} — never throws, so callers can report the
+// real reason rather than a generic failure.
 export async function sendTickle(endpoint, env){
-  const jwt = await vapidJwt(new URL(endpoint).origin, env);
-  const res = await fetch(endpoint, {
-    method:'POST',
-    headers:{
-      'TTL':'3600',
-      'Urgency':'normal',
-      'Content-Length':'0',
-      'Authorization': `vapid t=${jwt}, k=${env.VAPID_PUBLIC_KEY}`,
-    },
-  });
-  return res.status;
+  let jwt;
+  try{
+    jwt = await vapidJwt(new URL(endpoint).origin, env);
+  }catch(err){
+    return {status:0, error: err.message};
+  }
+  try{
+    const res = await fetch(endpoint, {
+      method:'POST',
+      headers:{
+        'TTL':'3600',
+        'Urgency':'normal',
+        'Content-Length':'0',
+        'Authorization': `vapid t=${jwt}, k=${cleanKey(env.VAPID_PUBLIC_KEY)}`,
+      },
+    });
+    // Push services explain rejections in the body; that text is what actually
+    // identifies a bad key or an expired subscription.
+    let detail = '';
+    if(res.status >= 400) detail = (await res.text().catch(()=>'')).slice(0, 300);
+    return {status: res.status, detail};
+  }catch(err){
+    return {status:0, error: `Could not reach ${new URL(endpoint).host}: ${err.message}`};
+  }
 }
 
 export const subKey = (hash)=> `push:${hash}`;
@@ -222,8 +279,13 @@ export async function runReminders(env, nowMs = Date.now()){
     }
     if(!fresh.length) continue;
 
-    await queueAndTickle(env, rec, fresh);
-    result.sent += fresh.length;
+    const outcome = await queueAndTickle(env, rec, fresh);
+    if(outcome.status >= 200 && outcome.status < 300){
+      result.sent += fresh.length;
+    } else {
+      result.failed = (result.failed || 0) + 1;
+      result.lastError = outcome.error || `${outcome.status} ${outcome.detail || ''}`.trim();
+    }
     if(rec.gone) result.dropped++;
   }
   return result;
@@ -237,13 +299,11 @@ export async function queueAndTickle(env, rec, notifications){
   const merged = [...existing, ...notifications].slice(-10);
   await env.ASSASSIN_KV.put(pendingKey(rec.hash), JSON.stringify(merged), {expirationTtl: 3600});
 
-  let status = 0;
-  try{ status = await sendTickle(rec.endpoint, env); }
-  catch(err){ return 0; }
+  const result = await sendTickle(rec.endpoint, env);
 
-  if(status === 404 || status === 410){
+  if(result.status === 404 || result.status === 410){
     rec.gone = true;
     await env.ASSASSIN_KV.delete(subKey(rec.hash));
   }
-  return status;
+  return result;
 }

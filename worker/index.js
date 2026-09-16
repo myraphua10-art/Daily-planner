@@ -27,6 +27,7 @@ import {
   onRequestPost as pushNotifyPost,
   onRequestOptions as pushNotifyOptions,
   onRequestPostRun as pushRunPost,
+  onRequestGetHealth as pushHealthGet,
 } from "../functions/api/push-notify.js";
 import { runReminders } from "../functions/reminders.js";
 
@@ -66,6 +67,7 @@ const routes = {
   "POST /api/push-test": pushNotifyPost,
   "OPTIONS /api/push-test": pushNotifyOptions,
   "POST /api/push-run": pushRunPost,
+  "GET /api/push-health": pushHealthGet,
 };
 
 export default {

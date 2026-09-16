@@ -8,7 +8,7 @@
 // the planner document lives under — so the cron job can read the calendar
 // without the raw code ever being written down.
 
-import { sha256hex, subKey, pendingKey, queueAndTickle, runReminders } from "../reminders.js";
+import { sha256hex, subKey, pendingKey, queueAndTickle, runReminders, verifyVapidKeys } from "../reminders.js";
 
 function cors(extra = {}) {
   return {
@@ -28,6 +28,25 @@ function reply(data, status = 200) {
 
 export function onRequestOptions() {
   return new Response(null, { status: 204, headers: cors() });
+}
+
+// GET /api/push-health — is the Worker able to send reminders at all?
+// Reports only whether each secret is present and well-formed. It never
+// returns key material.
+export async function onRequestGetHealth({ env }) {
+  const keys = await verifyVapidKeys(env);
+  const publicKey = String(env.VAPID_PUBLIC_KEY || "");
+  return reply({
+    ready: keys.ok,
+    problem: keys.ok ? undefined : keys.error,
+    publicKeySet: Boolean(env.VAPID_PUBLIC_KEY),
+    privateKeySet: Boolean(env.VAPID_PRIVATE_KEY),
+    subjectSet: Boolean(env.VAPID_SUBJECT),
+    // Enough to tell at a glance whether the Worker and the app agree, without
+    // revealing anything secret (the public key is in the page source anyway).
+    publicKeyStartsWith: publicKey.slice(0, 12),
+    publicKeyLength: publicKey.length,
+  });
 }
 
 async function readJson(request) {
@@ -94,15 +113,26 @@ export async function onRequestPost({ request, env }) {
   if (path.endsWith("/push-test")) {
     const rec = JSON.parse((await env.ASSASSIN_KV.get(subKey(hash))) || "null");
     if (!rec) return reply({ error: "This device isn't registered for reminders yet." }, 404);
-    if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) {
-      return reply({ error: "Reminders aren't set up on the server — the VAPID keys are missing." }, 503);
-    }
-    const status = await queueAndTickle(env, rec, [
+
+    // Check the keys before sending, so a mis-pasted secret says so plainly
+    // instead of looking like a network problem.
+    const keys = await verifyVapidKeys(env);
+    if (!keys.ok) return reply({ error: `Server setup: ${keys.error}` }, 503);
+
+    const outcome = await queueAndTickle(env, rec, [
       { title: "Reminders are working", body: "This is what an exam reminder will look like." },
     ]);
-    if (status === 0) return reply({ error: "Could not reach the push service." }, 502);
-    if (status >= 400) return reply({ error: `Push service said ${status}.` }, 502);
-    return reply({ ok: true, status });
+    if (outcome.error) return reply({ error: outcome.error }, 502);
+    if (outcome.status === 403) {
+      return reply({ error: "The push service rejected the key (403). This device subscribed under a different VAPID key — turn reminders off and on again to re-subscribe." }, 502);
+    }
+    if (outcome.status === 404 || outcome.status === 410) {
+      return reply({ error: "This device's subscription has expired. Turn reminders off and on again." }, 502);
+    }
+    if (outcome.status >= 400) {
+      return reply({ error: `Push service said ${outcome.status}${outcome.detail ? `: ${outcome.detail}` : "."}` }, 502);
+    }
+    return reply({ ok: true, status: outcome.status });
   }
 
   // /api/push-subscribe
