@@ -197,12 +197,12 @@
   .entry-actions{display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;}
   .entry.gone{opacity:.42;}
   .empty{font-size:13px; color:var(--sub); padding:4px 0;}
-  details.builtins summary{
+  details.builtins summary, details.builtin-events summary{
     cursor:pointer; font-size:14px; font-weight:600; padding:2px 0; list-style:none;
   }
-  details.builtins summary::-webkit-details-marker{display:none;}
-  details.builtins summary::before{content:'▸ '; color:var(--sub);}
-  details.builtins[open] summary::before{content:'▾ ';}
+  details.builtins summary::-webkit-details-marker, details.builtin-events summary::-webkit-details-marker{display:none;}
+  details.builtins summary::before, details.builtin-events summary::before{content:'▸ '; color:var(--sub);}
+  details.builtins[open] summary::before, details.builtin-events[open] summary::before{content:'▾ ';}
 
   /* ===== Mobile breakpoint ===== */
   @media (max-width:880px){
@@ -220,23 +220,21 @@
 <body>
 <div class="app">
   <nav class="sidebar">
-    <h1>📚 Myra's Planner</h1>
+    <h1>Myra's Planner</h1>
     <div class="tagline">RGS Sec 4 · Student-Athlete</div>
-    <button data-tab="today" class="active"><span class="ic">📅</span> Today's Plan</button>
-    <button data-tab="exams"><span class="ic">🗂️</span> What&#39;s Coming Up</button>
-    <button data-tab="week"><span class="ic">🗓️</span> Weekly Free-Time Map</button>
-    <button data-tab="topics"><span class="ic">✅</span> Topic Tracker</button>
-    <button data-tab="mine"><span class="ic">➕</span> My Entries</button>
+    <button data-tab="today" class="active">Today's Plan</button>
+    <button data-tab="exams">What&#39;s Coming Up</button>
+    <button data-tab="week">Weekly Free-Time Map</button>
+    <button data-tab="topics">Topic Tracker</button>
+    <button data-tab="mine">My Entries</button>
   </nav>
 
   <main>
     <div class="install-banner" id="installBanner">
-      <span style="font-size:20px">📲</span>
       <div><b>Add to your Home Screen</b>In Safari, tap the Share icon, then "Add to Home Screen" — it'll open full-screen like a real app.</div>
     </div>
     <div class="install-banner" id="notifBanner" style="cursor:pointer;">
-      <span style="font-size:20px">🔔</span>
-      <div><b id="notifTitle">Timetable reminders</b><span id="notifStatus">Tap to get nudges for swim, gym, tuition and study blocks. Exam and event reminders are set up in the ➕ tab.</span></div>
+      <div><b id="notifTitle">Timetable reminders</b><span id="notifStatus">Tap to get nudges for swim, gym, tuition and study blocks. Exam and event reminders are set up in My Entries.</span></div>
     </div>
     <div class="countdown-bar" id="countdownBar"></div>
 
@@ -248,11 +246,11 @@
   </main>
 
   <nav class="tabbar">
-    <button data-tab="today" class="active"><span class="ic">📅</span>Today</button>
-    <button data-tab="exams"><span class="ic">🗂️</span>Upcoming</button>
-    <button data-tab="week"><span class="ic">🗓️</span>Week Map</button>
-    <button data-tab="topics"><span class="ic">✅</span>Topics</button>
-    <button data-tab="mine"><span class="ic">➕</span>Add</button>
+    <button data-tab="today" class="active">Today</button>
+    <button data-tab="exams">Upcoming</button>
+    <button data-tab="week">Week Map</button>
+    <button data-tab="topics">Topics</button>
+    <button data-tab="mine">Add</button>
   </nav>
 </div>
 
@@ -328,7 +326,7 @@ async function enableNotifications(){
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(sub),
     });
-    titleEl.textContent = '🔔 Timetable reminders on';
+    titleEl.textContent = 'Timetable reminders on';
     statusEl.textContent = "You'll get nudges for swim, gym, tuition and study blocks.";
   } catch(err){
     statusEl.textContent = 'Something went wrong enabling notifications: ' + err.message;
@@ -427,11 +425,11 @@ const PERSONAL_DATES = ['2026-07-03','2026-07-10','2026-07-12','2026-07-19'];
 // The five buckets everything on the calendar falls into. Order here is the
 // order the cards appear in on the Upcoming tab.
 const CATEGORIES = [
-  {id:'exams',     icon:'🎯', label:'Exams',     noun:'exam',      blurb:'papers, CBAs and EYAs',            color:'#ef4444', tint:'#fee2e2'},
-  {id:'important', icon:'📋', label:'Important', noun:'event',     blurb:'meetings, deadlines, school',      color:'#f59e0b', tint:'#fef3c7'},
-  {id:'social',    icon:'🎉', label:'Social',    noun:'event',     blurb:'birthdays, parties, going out',    color:'#ec4899', tint:'#fce7f3'},
-  {id:'sport',     icon:'🏊', label:'Sport',     noun:'session',   blurb:'training, meets and competitions', color:'#0891b2', tint:'#cffafe'},
-  {id:'other',     icon:'📝', label:'Other',     noun:'reminder',  blurb:'anything else you noted down',     color:'#64748b', tint:'#e2e8f0'},
+  {id:'exams',     icon:'', label:'Exams',     noun:'exam',      blurb:'papers, CBAs and EYAs',            color:'#ef4444', tint:'#fee2e2'},
+  {id:'important', icon:'', label:'Important', noun:'event',     blurb:'meetings, deadlines, school',      color:'#f59e0b', tint:'#fef3c7'},
+  {id:'social',    icon:'', label:'Social',    noun:'event',     blurb:'birthdays, parties, going out',    color:'#ec4899', tint:'#fce7f3'},
+  {id:'sport',     icon:'', label:'Sport',     noun:'session',   blurb:'training, meets and competitions', color:'#0891b2', tint:'#cffafe'},
+  {id:'other',     icon:'', label:'Other',     noun:'reminder',  blurb:'anything else you noted down',     color:'#64748b', tint:'#e2e8f0'},
 ];
 const CAT = Object.fromEntries(CATEGORIES.map(c=>[c.id, c]));
 
@@ -649,7 +647,10 @@ function buildSnapshot(){
   });
   Object.entries(EVENTS).forEach(([date, list])=>{
     if(!within(date)) return;
-    list.forEach((ev,i)=> items.push({id:`ev:${date}:${i}`, kind:ev.cat||'important', title:ev.text, date, time:''}));
+    list.forEach((ev,i)=>{
+      if(hidden.includes(eventKey(date,i))) return;
+      items.push({id:eventKey(date,i), kind:ev.cat||'important', title:ev.text, date, time:''});
+    });
   });
   loadCustom().forEach(x=>{
     if(!within(x.date)) return;
@@ -672,6 +673,10 @@ function refreshSnapshot(){
 // Built-in exams are identified by their content, not an index, so hiding one
 // keeps working if the timetable above is edited later.
 const builtinKey = (e)=> `${e.subject}|${e.code}|${e.date}`;
+
+// Built-in events are identified by date + position in that day's list — same
+// id shape already used for them in buildSnapshot().
+const eventKey = (date, i)=> `ev:${date}:${i}`;
 
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -704,7 +709,8 @@ function allExams(){
   return EXAMS.filter(e=>!hidden.includes(builtinKey(e))).concat(customExams());
 }
 function eventsFor(dateStr){
-  const out = (EVENTS[dateStr]||[]).map(ev=>ev.text);
+  const hidden = loadHidden();
+  const out = (EVENTS[dateStr]||[]).filter((ev,i)=>!hidden.includes(eventKey(dateStr,i))).map(ev=>ev.text);
   loadCustom().filter(x=>x.kind!=='exams' && x.date===dateStr).forEach(x=>{
     const head = [(CAT[x.kind]||CAT.other).icon, x.time||'', esc(x.title)].filter(Boolean).join(' ');
     out.push(head + (x.detail?` — ${esc(x.detail)}`:''));
@@ -716,9 +722,13 @@ function eventsFor(dateStr){
 // Exams are excluded — they have their own richer cards.
 function categoryItems(catId){
   const out = [];
+  const hidden = loadHidden();
   Object.entries(EVENTS).forEach(([date, list])=>{
     if(daysUntil(date) < 0) return;
-    list.forEach(ev=>{ if((ev.cat||'important')===catId) out.push({date, text:ev.text}); });
+    list.forEach((ev,i)=>{
+      if(hidden.includes(eventKey(date,i))) return;
+      if((ev.cat||'important')===catId) out.push({date, text:ev.text});
+    });
   });
   loadCustom().forEach(x=>{
     if(x.kind !== catId) return;
@@ -777,7 +787,7 @@ function daysPill(d){
 function examCardsHtml(){
   // Exams drop off the day after they happen, so this always reads as a to-do list.
   const sorted = allExams().filter(e=>daysUntil(e.date)>=0).sort((a,b)=> new Date(a.date)-new Date(b.date));
-  if(!sorted.length) return `<div class="empty">🎉 That's every exam done. Go and have a life.</div>`;
+  if(!sorted.length) return `<div class="empty">That's every exam done. Go and have a life.</div>`;
   return sorted.map(e=>`<div class="exam-card flat">
       <div class="exam-dot" style="background:${colorFor(e.subject)}"></div>
       <div style="flex:1; min-width:0">
@@ -793,7 +803,7 @@ function examCardsHtml(){
 
 function eventRowsHtml(catId){
   const items = categoryItems(catId);
-  if(!items.length) return `<div class="empty">Nothing coming up. Add something in the ➕ tab.</div>`;
+  if(!items.length) return `<div class="empty">Nothing coming up. Add something in My Entries.</div>`;
   return items.map(it=>{
     const d = it.date ? daysUntil(it.date) : null;
     return `<div class="ev-row">
@@ -821,9 +831,9 @@ function trainingHtml(){
     </div>`);
   }
   if(!rows.length) return '';
-  return `<div class="sub-head">🔁 Training this week</div>${rows.join('')}
-    <div class="note">From your usual weekly routine — swim mornings on school days except Wednesday, gym daily. Change it in Today's Plan if a session moves.</div>
-    <div class="sub-head">📅 Meets &amp; one-offs</div>`;
+  return `<div class="sub-head">Training this week</div>${rows.join('')}
+    <div class="note">From your usual weekly routine — swim training 5–8pm every day except Saturday and Sunday. Change it in Today's Plan if a session moves.</div>
+    <div class="sub-head">Meets &amp; one-offs</div>`;
 }
 
 function catBodyHtml(catId){
@@ -840,7 +850,7 @@ function catCount(catId){
 function renderExams(){
   const el = document.getElementById('tab-exams');
   const open = openCats();
-  el.innerHTML = '<h2 class="section-title">🗂️ What\'s Coming Up</h2>'
+  el.innerHTML = '<h2 class="section-title">What\'s Coming Up</h2>'
     + '<p style="color:var(--sub); font-size:13px; margin:-8px 0 16px">Tap a category to see everything still ahead of it. Past dates drop off on their own.</p>'
     + CATEGORIES.map(c=>{
       const n = catCount(c.id);
@@ -862,7 +872,7 @@ function renderExams(){
 
 function renderWeekMap(){
   const el = document.getElementById('tab-week');
-  el.innerHTML = `<h2 class="section-title">🗓️ Weekly Free-Time Map</h2>
+  el.innerHTML = `<h2 class="section-title">Weekly Free-Time Map</h2>
     <p style="color:var(--sub); font-size:13px; margin-top:-8px">PE and Biology lessons are replaced with free study time. Existing Study Blocks (purple) are already in the normal timetable.</p>
     <div id="weekMapGrids"></div>`;
   const grids = document.getElementById('weekMapGrids');
@@ -873,17 +883,17 @@ function renderWeekMap(){
       const blocks = studyBlocksFor(wd, parity);
       let html = `<div class="day-col"><h4>${WEEKDAY_LABEL[wd]}</h4>`;
       freed.forEach(f=>{
-        if(f.ownday){ html += `<div class="slot own">🏠 OWN DAY<br><span style="font-weight:400">Full day at home</span></div>`; }
-        else { html += `<div class="slot free">✅ ${f.subject} free<br>${f.start}–${f.end}</div>`; }
+        if(f.ownday){ html += `<div class="slot own">OWN DAY<br><span style="font-weight:400">Full day at home</span></div>`; }
+        else { html += `<div class="slot free">${f.subject} free<br>${f.start}–${f.end}</div>`; }
       });
-      blocks.forEach(b=>{ html += `<div class="slot studyblock">📖 Study Block<br>${b.start}–${b.end}</div>`; });
+      blocks.forEach(b=>{ html += `<div class="slot studyblock">Study Block<br>${b.start}–${b.end}</div>`; });
       if(!freed.length && !blocks.length) html += `<div style="font-size:11.5px; color:#bbb; text-align:center; padding-top:10px">normal day</div>`;
       html += `</div>`;
       return html;
     }).join('');
     grids.innerHTML += `<div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h3 style="margin:0">${parity==='odd'?'🟡 Odd Week':'🔵 Even Week'}</h3>
+        <h3 style="margin:0">${parity==='odd'?'Odd Week':'Even Week'}</h3>
       </div>
       <div class="week-grid">${cols}</div>
     </div>`;
@@ -912,24 +922,24 @@ function buildDayTimeline(dateStr){
       {time:'12:00–13:00', title:'Lunch & break', desc:'', color:'#94a3b8'},
       {time:'13:30–16:00', title:'Review mistakes / weak-topic drilling', desc:'Go through the paper above — understand every wrong answer.', color:SUBJECT_COLORS.History},
       {time:'16:00–17:00', title:'Free / rest / family time', desc:'Protect this — burnout undoes progress.', color:'#94a3b8'},
-      {time:'17:00–18:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR},
+      {time:'17:00–18:00', title:'Gym', desc:'', color:SPORT_COLOR},
       {time:'20:00–22:00', title:'Light revision', desc:'Flashcards or formula recap, low intensity.', color:SUBJECT_COLORS.Physics},
-      {time:'22:30', title:'Lights out', desc:'5am wake for swim training tomorrow if there’s school.', color:'#475569'},
+      {time:'22:30', title:'Lights out', desc:'5am wake tomorrow if there’s school.', color:'#475569'},
     ]};
   }
 
   if(wdIdx===0){ // Sunday — tuition-heavy
     return {parity, weekend:true, items:[
       {time:'08:00–08:45', title:'Wake up & breakfast', desc:'', color:'#94a3b8'},
-      {time:'09:00–11:00', title:'🧪 Chemistry Tuition', desc:'', color:TUITION_COLOR},
-      {time:'11:15–13:15', title:'📐 Math Tuition', desc:'Only a 15-min gap after Chemistry — have a snack ready to bring.', color:TUITION_COLOR},
+      {time:'09:00–11:00', title:'Chemistry Tuition', desc:'', color:TUITION_COLOR},
+      {time:'11:15–13:15', title:'Math Tuition', desc:'Only a 15-min gap after Chemistry — have a snack ready to bring.', color:TUITION_COLOR},
       {time:'13:15–14:15', title:'Lunch & break', desc:'', color:'#94a3b8'},
       {time:'14:15–16:00', title:'Open study block', desc:'Review tuition material or drill the nearest-exam subject.', color:SUBJECT_COLORS.History},
       {time:'16:15–18:15', title:'🀄 Chinese Tuition', desc:'', color:TUITION_COLOR},
       {time:'18:15–19:00', title:'Dinner', desc:'', color:'#94a3b8'},
-      {time:'19:00–20:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR},
+      {time:'19:00–20:00', title:'Gym', desc:'', color:SPORT_COLOR},
       {time:'20:00–22:00', title:'Light revision', desc:'Flashcards or formula recap, low intensity.', color:SUBJECT_COLORS.Physics},
-      {time:'22:30', title:'Lights out', desc:'5am wake for swim training tomorrow.', color:'#475569'},
+      {time:'22:30', title:'Lights out', desc:'5am wake for school tomorrow.', color:'#475569'},
     ]};
   }
 
@@ -943,24 +953,21 @@ function buildDayTimeline(dateStr){
   items.push({time:'05:00', title:'Wake up', desc:'', color:'#94a3b8'});
 
   if(ownDay){
-    items.push({time:'05:00–07:00', title:'Free morning (no swim training listed for OWN DAY — confirm with coach)', desc:'', color:'#94a3b8'});
+    items.push({time:'05:00–07:00', title:'Free morning', desc:'Swim training is in the evening now.', color:'#94a3b8'});
     items.push({time:'07:30–09:30', title:'Deep-focus study block 1', desc:'Tackle your hardest / nearest-exam topic first while fresh.', color:SUBJECT_COLORS.Mathematics});
     items.push({time:'09:30–09:45', title:'Break', desc:'', color:'#94a3b8'});
     items.push({time:'09:45–11:45', title:'Timed past-paper practice', desc:'', color:SUBJECT_COLORS.History});
     items.push({time:'11:45–12:45', title:'Lunch', desc:'', color:'#94a3b8'});
     items.push({time:'13:00–15:00', title:'Review + weak-topic drilling', desc:'Go over the past paper above.', color:SUBJECT_COLORS.Physics});
-    items.push({time:'15:00–16:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR});
+    items.push({time:'15:00–16:00', title:'Gym', desc:'Overlaps the swim block below — flagged, not resolved.', color:SPORT_COLOR});
     items.push({time:'16:00–18:00', title:'Deep-focus study block 2', desc:'Second subject, or continue weakest topic.', color:SUBJECT_COLORS.Chemistry});
+    items.push({time:'17:00–20:00', title:'Swim training', desc:'Overlaps the study block, gym and dinner — flagged, not resolved. Tell me how to fit these together.', color:SPORT_COLOR});
     items.push({time:'18:00–19:00', title:'Dinner', desc:'', color:'#94a3b8'});
     items.push({time:'19:30–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Mathematics});
     items.push({time:'22:00–22:30', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
-    items.push({time:'22:30', title:'😴 Lights out', desc:'Non-negotiable given the 5am wake.', color:'#1e293b'});
+    items.push({time:'22:30', title:'Lights out', desc:'Non-negotiable given the 5am wake.', color:'#1e293b'});
   } else {
-    if(weekday==='wed'){
-      items.push({time:'05:00–07:00', title:'Free morning', desc:'No swim training on Wednesdays.', color:'#94a3b8'});
-    } else {
-      items.push({time:'05:30–07:00', title:'🏊 Swim training', desc:'', color:SPORT_COLOR});
-    }
+    items.push({time:'05:00–07:00', title:'Free morning', desc:'Swim training is in the evening now.', color:'#94a3b8'});
     items.push({time:'07:00–08:00', title:'Travel & breakfast', desc:'', color:'#94a3b8'});
     items.push({time:'08:00–~15:15', title:'School (regular lessons)', desc:override?override.note:'Freed and study-block periods below are highlighted.', color:'#cbd5e1'});
     const periods = [
@@ -968,33 +975,36 @@ function buildDayTimeline(dateStr){
       ...blocks.map(b=>({start:b.start, end:b.end, free:false})),
     ].sort((a,b)=> a.start.localeCompare(b.start));
     periods.forEach(p=>{
-      if(p.free) items.push({time:`${p.start}–${p.end}`, title:`✅ ${p.subject} lesson freed`, desc:'Use this period for focused study — see suggestion below.', color:SUBJECT_COLORS.Mathematics, free:true});
-      else items.push({time:`${p.start}–${p.end}`, title:'📖 Existing Study Block', desc:'Already built into the timetable.', color:SUBJECT_COLORS.Physics});
+      if(p.free) items.push({time:`${p.start}–${p.end}`, title:`${p.subject} lesson freed`, desc:'Use this period for focused study — see suggestion below.', color:SUBJECT_COLORS.Mathematics, free:true});
+      else items.push({time:`${p.start}–${p.end}`, title:'Existing Study Block', desc:'Already built into the timetable.', color:SUBJECT_COLORS.Physics});
     });
     items.push({time:'15:15–16:00', title:'Travel / snack / rest', desc:'', color:'#94a3b8'});
 
     if(weekday==='wed'){
       items.push({time:'16:00–16:30', title:'Afternoon study block', desc:'Short session before tuition.', color:SUBJECT_COLORS.History});
-      items.push({time:'16:30–18:00', title:'📐 Math Tuition', desc:'End time estimated — adjust if it differs.', color:TUITION_COLOR});
+      items.push({time:'16:30–18:00', title:'Math Tuition', desc:'End time estimated — overlaps the swim block below, flagged not resolved.', color:TUITION_COLOR});
+      items.push({time:'17:00–20:00', title:'Swim training', desc:'Overlaps Math Tuition and dinner — flagged, not resolved. Tell me how to fit these together.', color:SPORT_COLOR});
       items.push({time:'18:00–19:00', title:'Dinner', desc:'', color:'#94a3b8'});
-      items.push({time:'19:00–20:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR});
+      items.push({time:'19:00–20:00', title:'Gym', desc:'Overlaps the swim block above — flagged, not resolved.', color:SPORT_COLOR});
       items.push({time:'20:00–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Chemistry});
       items.push({time:'22:00–22:30', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
-      items.push({time:'22:30', title:'😴 Lights out', desc:'Non-negotiable given the 5am wake.', color:'#1e293b'});
+      items.push({time:'22:30', title:'Lights out', desc:'Non-negotiable given the 5am wake.', color:'#1e293b'});
     } else if(weekday==='fri'){
       items.push({time:'16:00–18:00', title:'Afternoon study block', desc:'Nearest-exam subject priority.', color:SUBJECT_COLORS.History});
-      items.push({time:'18:00–19:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR});
-      items.push({time:'19:00–21:00', title:'⚛️ Physics Tuition', desc:'Bring a snack — straight from the gym.', color:TUITION_COLOR});
+      items.push({time:'17:00–20:00', title:'Swim training', desc:'Overlaps Gym and Physics Tuition below — flagged, not resolved. Tell me how to fit these together.', color:SPORT_COLOR});
+      items.push({time:'18:00–19:00', title:'Gym', desc:'Overlaps the swim block above — flagged, not resolved.', color:SPORT_COLOR});
+      items.push({time:'19:00–21:00', title:'Physics Tuition', desc:'Overlaps the swim block above — flagged, not resolved.', color:TUITION_COLOR});
       items.push({time:'21:00–21:45', title:'Dinner', desc:'Later than usual on Fridays.', color:'#94a3b8'});
       items.push({time:'21:45–22:00', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
-      items.push({time:'22:00', title:'😴 Lights out', desc:'A little earlier than other nights since Physics Tuition runs late — catch up on sleep over the weekend.', color:'#1e293b'});
+      items.push({time:'22:00', title:'Lights out', desc:'A little earlier than other nights since Physics Tuition runs late — catch up on sleep over the weekend.', color:'#1e293b'});
     } else {
       items.push({time:'16:00–18:00', title:'Afternoon study block', desc:'Nearest-exam subject priority.', color:SUBJECT_COLORS.History});
-      items.push({time:'18:00–19:00', title:'🏋️ Gym', desc:'', color:SPORT_COLOR});
+      items.push({time:'17:00–20:00', title:'Swim training', desc:'Overlaps Gym and dinner below — flagged, not resolved. Tell me how to fit these together.', color:SPORT_COLOR});
+      items.push({time:'18:00–19:00', title:'Gym', desc:'Overlaps the swim block above — flagged, not resolved.', color:SPORT_COLOR});
       items.push({time:'19:00–19:30', title:'Dinner', desc:'', color:'#94a3b8'});
       items.push({time:'19:30–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Chemistry});
       items.push({time:'22:00–22:30', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
-      items.push({time:'22:30', title:'😴 Lights out', desc:'Non-negotiable given the 5am wake.', color:'#1e293b'});
+      items.push({time:'22:30', title:'Lights out', desc:'Non-negotiable given the 5am wake.', color:'#1e293b'});
     }
   }
 
@@ -1019,14 +1029,14 @@ function renderToday(dateStr){
   if(data.examsToday && data.examsToday.length){
     const list = data.examsToday.map(e=>`${e.subject} ${e.code} (${e.weight!=null?e.weight+'%':e.weightLabel})`).join(' + ');
     header += `<div class="card" style="background:#fef2f2; border:1px solid #fecaca;">
-      <strong>🎯 EXAM${data.examsToday.length>1?'S':''} TODAY:</strong> ${list}. Light recap only — no new content.
+      <strong>EXAM${data.examsToday.length>1?'S':''} TODAY:</strong> ${list}. Light recap only — no new content.
     </div>`;
   }
   if(data.ownDay){
-    header += `<div class="card" style="background:#fef2f2; border:1px solid #fecaca;"><strong>🏠 OWN DAY</strong> — full day at home. Great day for a timed past paper + deep review.</div>`;
+    header += `<div class="card" style="background:#fef2f2; border:1px solid #fecaca;"><strong>OWN DAY</strong> — full day at home. Great day for a timed past paper + deep review.</div>`;
   }
   if(data.override){
-    header += `<div class="card" style="background:#fff7ed; border:1px solid #fed7aa;"><strong>⚠️ Schedule swap:</strong> ${data.override.note}</div>`;
+    header += `<div class="card" style="background:#fff7ed; border:1px solid #fed7aa;"><strong>Schedule swap:</strong> ${data.override.note}</div>`;
   }
   const dayEvents = eventsFor(dateStr);
   if(dayEvents.length){
@@ -1035,17 +1045,17 @@ function renderToday(dateStr){
   const wdIdxToday = new Date(dateStr+'T00:00:00').getDay();
   const isPersonalDay = PERSONAL_DATES.includes(dateStr) || wdIdxToday===5 || wdIdxToday===0 || (wdIdxToday===1 && data.parity==='odd');
   if(isPersonalDay){
-    header += `<div class="card" style="background:#f8fafc; border:1px solid #e2e8f0;"><strong>📌 Personal plans today</strong></div>`;
+    header += `<div class="card" style="background:#f8fafc; border:1px solid #e2e8f0;"><strong>Personal plans today</strong></div>`;
   }
   const timeline = `<div class="timeline">${data.items.map(it=>`
     <div class="tline-item">
       <div class="tline-time">${it.time}</div>
       <div class="tline-bar" style="background:${it.color}"></div>
       <div class="tline-content" style="background:${it.color}18;">
-        <h5>${it.title}</h5>${it.desc?`<p>${it.desc}</p>`:''}
+        <h5>${it.title}</h5>
       </div>
     </div>`).join('')}</div>`;
-  el.innerHTML = `<h2 class="section-title">📅 ${fmtDateShort(dateStr)}</h2>` + header + timeline;
+  el.innerHTML = `<h2 class="section-title">${fmtDateShort(dateStr)}</h2>` + header + timeline;
   document.getElementById('datePicker').addEventListener('change', e=>{ renderToday(e.target.value); });
   document.getElementById('prevDay').addEventListener('click', ()=>{ if(!atMin) renderToday(addDays(dateStr,-1)); });
   document.getElementById('nextDay').addEventListener('click', ()=>{ if(!atMax) renderToday(addDays(dateStr,1)); });
@@ -1053,7 +1063,7 @@ function renderToday(dateStr){
 
 function renderTopics(){
   const el = document.getElementById('tab-topics');
-  el.innerHTML = '<h2 class="section-title">✅ Topic Tracker</h2>' + Object.entries(TOPIC_BANK).map(([subject,topics])=>{
+  el.innerHTML = '<h2 class="section-title">Topic Tracker</h2>' + Object.entries(TOPIC_BANK).map(([subject,topics])=>{
     const rows = topics.map((t,i)=>{
       const key = `topic-${subject}-${i}`;
       return `<label class="topic-row" id="row-${key}">
@@ -1182,7 +1192,7 @@ function syncCardHtml(){
   if(!code){
     if(syncPane === 'enter'){
       return `<div class="card">
-        <h3 style="margin:0 0 4px; font-size:16px">🔗 Connect this device</h3>
+        <h3 style="margin:0 0 4px; font-size:16px">Connect this device</h3>
         <div class="exam-meta">Type the sync code from your other device. Everything on both ends gets merged — nothing is thrown away.</div>
         <div class="form-row" style="margin-top:12px">
           <div class="field"><label for="codeIn">Sync code</label>
@@ -1196,7 +1206,7 @@ function syncCardHtml(){
       </div>`;
     }
     return `<div class="card">
-      <h3 style="margin:0 0 4px; font-size:16px">📴 Sync is off</h3>
+      <h3 style="margin:0 0 4px; font-size:16px">Sync is off</h3>
       <div class="exam-meta">Everything is saved on this device only. Turn on sync to see the same entries, hidden exams and ticked topics on your phone and laptop.</div>
       <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
         <button class="btn" id="startSync">Turn on sync</button>
@@ -1208,11 +1218,11 @@ function syncCardHtml(){
   const s = syncStatus;
   const line = s.state==='syncing' ? '<span style="color:var(--sub)">Syncing…</span>'
     : s.state==='error' ? `<span style="color:#b91c1c">${esc(s.error)}</span>`
-    : s.at ? `<span style="color:#047857">✅ Synced ${agoText(s.at)}</span>`
+    : s.at ? `<span style="color:#047857">Synced ${agoText(s.at)}</span>`
     : '<span style="color:var(--sub)">Waiting for first sync…</span>';
 
   return `<div class="card">
-    <h3 style="margin:0 0 4px; font-size:16px">🔄 Syncing across devices</h3>
+    <h3 style="margin:0 0 4px; font-size:16px">Syncing across devices</h3>
     <div class="exam-meta" style="margin-bottom:10px">${line}</div>
     <div class="code-box">
       <code id="codeText">${codeVisible ? esc(code) : '••••-••••-••••-••••'}</code>
@@ -1381,13 +1391,13 @@ function reminderCardHtml(){
     const chips = OFFSETS.map(o=>`<button type="button" class="chip-toggle ${picked.includes(o.id)?'on':''}"
       data-remind="${c.id}" data-off="${o.id}">${o.label}</button>`).join('');
     return `<div class="remind-row">
-      <div class="remind-name">${c.icon} ${c.label}</div>
+      <div class="remind-name">${c.label}</div>
       <div class="chip-row">${chips}</div>
     </div>`;
   }).join('');
 
   return `<div class="card">
-    <h3 style="margin:0 0 4px; font-size:16px">${on ? '🔔 Reminders are on' : '🔕 Reminders are off'}</h3>
+    <h3 style="margin:0 0 4px; font-size:16px">${on ? 'Reminders are on' : 'Reminders are off'}</h3>
     <div class="exam-meta">${on
       ? 'This device gets a notification before the things you pick below. Timings are shared with your other devices.'
       : 'Get a notification before exams, deadlines and anything else you add.'}</div>
@@ -1454,6 +1464,7 @@ const BLANK_ENTRY = {kind:'exams', id:null, title:'', code:'', date:'', time:'',
 let entryForm = {...BLANK_ENTRY};
 let entryError = '';
 let builtinsOpen = false;  // kept across re-renders so hiding an exam doesn't collapse the list
+let eventsOpen = false;    // same, for the built-in events list
 
 function refreshEverything(){
   renderCountdown();
@@ -1466,7 +1477,7 @@ function refreshEverything(){
 function entryFormHtml(){
   const f = entryForm;
   const seg = CATEGORIES.map(c=>
-    `<button type="button" data-kind="${c.id}" class="${f.kind===c.id?'active':''}">${c.icon} ${c.label}</button>`
+    `<button type="button" data-kind="${c.id}" class="${f.kind===c.id?'active':''}">${c.label}</button>`
   ).join('');
 
   let fields = '';
@@ -1534,7 +1545,7 @@ function entryFormHtml(){
     <div class="chip-row" style="margin-top:6px">${chips}</div>`;
 
   return `<div class="card">
-    <h3 style="margin:0 0 12px; font-size:16px">${f.id ? '✏️ Edit entry' : '➕ Add something'}</h3>
+    <h3 style="margin:0 0 12px; font-size:16px">${f.id ? 'Edit entry' : 'Add something'}</h3>
     <div class="seg">${seg}</div>
     ${fields}
     ${remindBlock}
@@ -1570,7 +1581,7 @@ function entryListHtml(){
     ].filter(Boolean).join(' · ');
     return `<div class="entry ${past?'gone':''}">
       <div class="grow">
-        <h4>${m.icon} ${esc(x.title)}</h4>
+        <h4>${esc(x.title)}</h4>
         <div class="meta">${when}${extra?` · ${extra}`:''}</div>
       </div>
       <div class="entry-actions">
@@ -1607,12 +1618,41 @@ function builtinListHtml(){
   </details></div>`;
 }
 
+function eventListHtml(){
+  const hidden = loadHidden();
+  const upcoming = [];
+  Object.entries(EVENTS).forEach(([date, list])=>{
+    if(daysUntil(date) < 0) return;
+    list.forEach((ev,i)=> upcoming.push({date, i, ev}));
+  });
+  upcoming.sort((a,b)=> a.date.localeCompare(b.date));
+  const rows = upcoming.map(({date,i,ev})=>{
+    const k = eventKey(date,i);
+    const isHidden = hidden.includes(k);
+    return `<div class="entry ${isHidden?'gone':''}">
+      <div class="grow">
+        <h4>${ev.text}</h4>
+        <div class="meta">${fmtDateShort(date)}${isHidden?' · hidden':''}</div>
+      </div>
+      <div class="entry-actions">
+        <button class="btn ghost small" data-toggle="${esc(k)}">${isHidden?'Show':'Hide'}</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="card"><details class="builtin-events" ${eventsOpen?'open':''}>
+    <summary>School events already in the app (${upcoming.length})</summary>
+    <div class="note" style="margin:10px 0 4px">Hide anything that's got the wrong date, then add your own version above. Hiding never deletes it — you can bring it back here any time.</div>
+    ${rows}
+  </details></div>`;
+}
+
 function renderMine(){
   const el = document.getElementById('tab-mine');
-  el.innerHTML = '<h2 class="section-title">➕ My Entries</h2>'
+  el.innerHTML = '<h2 class="section-title">My Entries</h2>'
     + entryFormHtml()
     + entryListHtml()
     + builtinListHtml()
+    + eventListHtml()
     + '<div id="reminderCard"></div>'
     + '<div id="syncCard"></div>';
   renderReminderCard();
@@ -1620,6 +1660,8 @@ function renderMine(){
 
   const det = el.querySelector('details.builtins');
   if(det) det.addEventListener('toggle', ()=>{ builtinsOpen = det.open; });
+  const detEv = el.querySelector('details.builtin-events');
+  if(detEv) detEv.addEventListener('toggle', ()=>{ eventsOpen = detEv.open; });
 
   el.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click', ()=>{
     readFormInputs();
@@ -1753,7 +1795,7 @@ if('serviceWorker' in navigator && 'PushManager' in window){
   navigator.serviceWorker.getRegistration().then(reg=>{
     if(reg) return reg.pushManager.getSubscription().then(sub=>{
       if(sub){
-        document.getElementById('notifTitle').textContent = '🔔 Timetable reminders on';
+        document.getElementById('notifTitle').textContent = 'Timetable reminders on';
         document.getElementById('notifStatus').textContent = "You'll get nudges for swim, gym, tuition and study blocks.";
       }
     });
