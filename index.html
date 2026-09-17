@@ -268,9 +268,6 @@
     <div class="install-banner" id="installBanner">
       <div><b>Add to your Home Screen</b>In Safari, tap the Share icon, then "Add to Home Screen" — it'll open full-screen like a real app.</div>
     </div>
-    <div class="install-banner" id="notifBanner" style="cursor:pointer;">
-      <div><b id="notifTitle">Timetable reminders</b><span id="notifStatus">Tap to get nudges for swim, tuition and study blocks. Exam and event reminders are set up in My Entries.</span></div>
-    </div>
     <div class="countdown-bar" id="countdownBar"></div>
 
     <section id="tab-today"></section>
@@ -293,8 +290,6 @@
 const SUBJECT_COLORS = {Mathematics:'var(--math)', History:'var(--hist)', Physics:'var(--phy)', Chemistry:'var(--chem)', 'Higher Chinese':'#ec4899', 'English Language':'#14b8a6', 'Inquiry and Advocacy':'#ef4444'};
 
 // ---- Push notifications ----
-// Replace PUSH_SERVER with your deployed Cloudflare Worker URL (e.g. https://yourworker.yourname.workers.dev)
-const PUSH_SERVER = 'https://personalplanner.myra-phua10.workers.dev';
 // Rotated Sept 2026: the private half of the previous pair was stored as a
 // Cloudflare Secret and could no longer be read back, so a new pair was
 // generated. ensureSubscription() below re-subscribes any device still holding
@@ -330,42 +325,6 @@ async function ensureSubscription(reg){
     sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey: wanted});
   }
   return sub;
-}
-
-async function enableNotifications(){
-  const statusEl = document.getElementById('notifStatus');
-  const titleEl = document.getElementById('notifTitle');
-  if(PUSH_SERVER === 'PASTE_YOUR_WORKER_URL_HERE'){
-    statusEl.textContent = 'Not set up yet — Cloudflare Worker URL is missing.';
-    return;
-  }
-  if(!('serviceWorker' in navigator) || !('PushManager' in window)){
-    statusEl.textContent = 'Push notifications are not supported in this browser.';
-    return;
-  }
-  const isIOSNow = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  if(isIOSNow && window.navigator.standalone !== true){
-    statusEl.textContent = 'On iPhone/iPad: first "Add to Home Screen" above, then open the app from that icon, then tap here again.';
-    return;
-  }
-  try{
-    const reg = await navigator.serviceWorker.register('sw.js');
-    const perm = await Notification.requestPermission();
-    if(perm !== 'granted'){
-      statusEl.textContent = 'Notifications permission was not granted.';
-      return;
-    }
-    const sub = await ensureSubscription(reg);
-    await fetch(PUSH_SERVER + '/subscribe', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(sub),
-    });
-    titleEl.textContent = 'Timetable reminders on';
-    statusEl.textContent = "You'll get nudges for swim, tuition and study blocks.";
-  } catch(err){
-    statusEl.textContent = 'Something went wrong enabling notifications: ' + err.message;
-  }
 }
 
 const EXAMS = [
@@ -671,6 +630,45 @@ function setSetting(key, value){
 // into the synced document for it to read. Titles are raw here, not escaped:
 // they end up in a notification, not in HTML.
 const SNAPSHOT_DAYS = 120;
+
+// Timeline items that are just logistics, not something worth a push for.
+const NON_REMINDABLE_TITLES = new Set([
+  'Wake up', 'Wake up & breakfast', 'Free morning', 'Travel & breakfast',
+  'School (regular lessons)', 'Travel / snack / rest', 'Dinner', 'Lunch',
+  'Lunch & break', 'Break', 'Wind down', 'Lights out',
+  'Free / rest / family time',
+]);
+// Reminders need a single HH:MM, but timeline items show ranges like "17:00–20:00".
+function startTimeOf(timeStr){
+  const m = String(timeStr||'').match(/^(\d{2}:\d{2})/);
+  return m ? m[1] : '';
+}
+// Swim, tuition and study blocks for the next few weeks, pulled straight off
+// buildDayTimeline so this can never drift from what Today's Plan shows. Kept
+// to a short rolling window (unlike the 120-day exam/event horizon) since it's
+// regenerated on every sync anyway and these repeat daily.
+const PERSONAL_HORIZON_DAYS = 21;
+function personalScheduleItems(){
+  const today = todayISO();
+  const items = [];
+  for(let i=0;i<PERSONAL_HORIZON_DAYS;i++){
+    const day = addDays(today, i);
+    if(day<MIN_DATE || day>MAX_DATE) break;
+    buildDayTimeline(day).items.forEach((it,idx)=>{
+      if(NON_REMINDABLE_TITLES.has(it.title)) return;
+      const time = startTimeOf(it.time);
+      if(!time) return;
+      items.push({
+        id: `personal:${day}:${idx}`,
+        kind: it.color===SPORT_COLOR ? 'sport' : 'other',
+        title: it.title, date: day, time,
+        remind: ['1h'],
+      });
+    });
+  }
+  return items;
+}
+
 function buildSnapshot(){
   const today = todayISO(), horizon = addDays(today, SNAPSHOT_DAYS);
   const hidden = loadHidden();
@@ -694,6 +692,7 @@ function buildSnapshot(){
     if(Array.isArray(x.remind)) it.remind = x.remind;
     items.push(it);
   });
+  items.push(...personalScheduleItems());
 
   return items.sort((a,b)=> a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
 }
@@ -1566,8 +1565,8 @@ function reminderCardHtml(){
   return `<div class="card">
     <h3 style="margin:0 0 4px; font-size:16px">${on ? 'Reminders are on' : 'Reminders are off'}</h3>
     <div class="exam-meta">${on
-      ? 'This device gets a notification before the things you pick below. Timings are shared with your other devices.'
-      : 'Get a notification before exams, deadlines and anything else you add.'}</div>
+      ? 'This device gets a notification before the things you pick below, plus an hour before every swim session, tuition slot and study block. Timings are shared with your other devices.'
+      : 'Get a notification before exams and deadlines, plus an hour before every swim session, tuition slot and study block.'}</div>
     ${pushState.msg ? `<div class="form-err" style="margin-top:8px">${esc(pushState.msg)}</div>` : ''}
     ${pushState.ok ? `<div style="font-size:12.5px; color:#34d399; margin-top:8px">${esc(pushState.ok)}</div>` : ''}
     <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
@@ -1958,19 +1957,6 @@ const isStandalone = window.navigator.standalone === true;
 if(isIOS && !isStandalone){
   document.getElementById('installBanner').style.display = 'flex';
 }
-document.getElementById('notifBanner').style.display = 'flex';
-document.getElementById('notifBanner').addEventListener('click', enableNotifications);
-if('serviceWorker' in navigator && 'PushManager' in window){
-  navigator.serviceWorker.getRegistration().then(reg=>{
-    if(reg) return reg.pushManager.getSubscription().then(sub=>{
-      if(sub){
-        document.getElementById('notifTitle').textContent = 'Timetable reminders on';
-        document.getElementById('notifStatus').textContent = "You'll get nudges for swim, tuition and study blocks.";
-      }
-    });
-  });
-}
-
 // ---- Init ----
 loadDoc();
 renderCountdown();
