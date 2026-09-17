@@ -461,8 +461,9 @@ const EVENTS = {
 };
 
 // Fixed weekly tuition (actual calendar weekday — applies regardless of OWN DAY / overrides).
+// Math Tuition isn't listed here — it moves between Wednesday morning (OWN DAY
+// weeks) and Saturday evening (other weeks), so buildDayTimeline places it directly.
 const TUITION_WEEKDAY = {
-  wed: [{subject:'Math Tuition', start:'16:30', end:'18:00', estimated:true}],
   fri: [{subject:'Physics Tuition', start:'19:00', end:'21:00'}],
 };
 const SUNDAY_TUITION = [
@@ -916,16 +917,24 @@ function buildDayTimeline(dateStr){
   const override = DATE_OVERRIDES[dateStr];
 
   if(wdIdx===6){ // Saturday — open study day
-    return {parity, weekend:true, items:[
+    // Math Tuition moved here from Wednesday, but only on weeks where Wednesday
+    // isn't OWN DAY (odd weeks) — on OWN DAY weeks it's already done that morning.
+    const satTuition = parity==='even';
+    const items = [
       {time:'08:00–08:30', title:'Wake up & breakfast', desc:'Sleep in a little — recovery matters.', color:'#94a3b8'},
       {time:'09:00–12:00', title:'Timed past-paper practice', desc:'Pick the subject closest to its exam date.', color:SUBJECT_COLORS.Mathematics},
       {time:'12:00–13:00', title:'Lunch & break', desc:'', color:'#94a3b8'},
       {time:'13:30–16:00', title:'Review mistakes / weak-topic drilling', desc:'Go through the paper above — understand every wrong answer.', color:SUBJECT_COLORS.History},
-      {time:'16:00–17:00', title:'Free / rest / family time', desc:'Protect this — burnout undoes progress.', color:'#94a3b8'},
-      {time:'17:00–18:00', title:'Gym', desc:'', color:SPORT_COLOR},
-      {time:'20:00–22:00', title:'Light revision', desc:'Flashcards or formula recap, low intensity.', color:SUBJECT_COLORS.Physics},
-      {time:'22:30', title:'Lights out', desc:'5am wake tomorrow if there’s school.', color:'#475569'},
-    ]};
+      {time:'16:00–19:00', title:'Free / rest / family time', desc:'Protect this — burnout undoes progress.', color:'#94a3b8'},
+    ];
+    if(satTuition){
+      items.push({time:'19:00–21:00', title:'Math Tuition', desc:'', color:TUITION_COLOR});
+      items.push({time:'21:15–22:15', title:'Light revision', desc:'Flashcards or formula recap, low intensity.', color:SUBJECT_COLORS.Physics});
+    } else {
+      items.push({time:'19:00–21:00', title:'Light revision', desc:'Flashcards or formula recap, low intensity.', color:SUBJECT_COLORS.Physics});
+    }
+    items.push({time:'22:30', title:'Lights out', desc:'5am wake tomorrow if there’s school.', color:'#475569'});
+    return {parity, weekend:true, items};
   }
 
   if(wdIdx===0){ // Sunday — tuition-heavy
@@ -937,8 +946,7 @@ function buildDayTimeline(dateStr){
       {time:'14:15–16:00', title:'Open study block', desc:'Review tuition material or drill the nearest-exam subject.', color:SUBJECT_COLORS.History},
       {time:'16:15–18:15', title:'🀄 Chinese Tuition', desc:'', color:TUITION_COLOR},
       {time:'18:15–19:00', title:'Dinner', desc:'', color:'#94a3b8'},
-      {time:'19:00–20:00', title:'Gym', desc:'', color:SPORT_COLOR},
-      {time:'20:00–22:00', title:'Light revision', desc:'Flashcards or formula recap, low intensity.', color:SUBJECT_COLORS.Physics},
+      {time:'19:00–22:00', title:'Light revision', desc:'Flashcards or formula recap, low intensity.', color:SUBJECT_COLORS.Physics},
       {time:'22:30', title:'Lights out', desc:'5am wake for school tomorrow.', color:'#475569'},
     ]};
   }
@@ -954,16 +962,15 @@ function buildDayTimeline(dateStr){
 
   if(ownDay){
     items.push({time:'05:00–07:00', title:'Free morning', desc:'Swim training is in the evening now.', color:'#94a3b8'});
-    items.push({time:'07:30–09:30', title:'Deep-focus study block 1', desc:'Tackle your hardest / nearest-exam topic first while fresh.', color:SUBJECT_COLORS.Mathematics});
-    items.push({time:'09:30–09:45', title:'Break', desc:'', color:'#94a3b8'});
-    items.push({time:'09:45–11:45', title:'Timed past-paper practice', desc:'', color:SUBJECT_COLORS.History});
-    items.push({time:'11:45–12:45', title:'Lunch', desc:'', color:'#94a3b8'});
-    items.push({time:'13:00–15:00', title:'Review + weak-topic drilling', desc:'Go over the past paper above.', color:SUBJECT_COLORS.Physics});
-    items.push({time:'15:00–16:00', title:'Gym', desc:'Overlaps the swim block below — flagged, not resolved.', color:SPORT_COLOR});
-    items.push({time:'16:00–18:00', title:'Deep-focus study block 2', desc:'Second subject, or continue weakest topic.', color:SUBJECT_COLORS.Chemistry});
-    items.push({time:'17:00–20:00', title:'Swim training', desc:'Overlaps the study block, gym and dinner — flagged, not resolved. Tell me how to fit these together.', color:SPORT_COLOR});
-    items.push({time:'18:00–19:00', title:'Dinner', desc:'', color:'#94a3b8'});
-    items.push({time:'19:30–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Mathematics});
+    items.push({time:'07:30–09:00', title:'Deep-focus study block 1', desc:'Tackle your hardest / nearest-exam topic first while fresh.', color:SUBJECT_COLORS.Mathematics});
+    items.push({time:'09:00–11:00', title:'Math Tuition', desc:'', color:TUITION_COLOR});
+    items.push({time:'11:00–11:15', title:'Break', desc:'', color:'#94a3b8'});
+    items.push({time:'11:15–13:15', title:'Timed past-paper practice', desc:'', color:SUBJECT_COLORS.History});
+    items.push({time:'13:15–14:15', title:'Lunch', desc:'', color:'#94a3b8'});
+    items.push({time:'14:15–16:15', title:'Review + weak-topic drilling', desc:'Go over the past paper above.', color:SUBJECT_COLORS.Physics});
+    items.push({time:'17:00–20:00', title:'Swim training', desc:'', color:SPORT_COLOR});
+    items.push({time:'20:00–20:30', title:'Dinner', desc:'', color:'#94a3b8'});
+    items.push({time:'20:30–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Mathematics});
     items.push({time:'22:00–22:30', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
     items.push({time:'22:30', title:'Lights out', desc:'Non-negotiable given the 5am wake.', color:'#1e293b'});
   } else {
@@ -981,28 +988,24 @@ function buildDayTimeline(dateStr){
     items.push({time:'15:15–16:00', title:'Travel / snack / rest', desc:'', color:'#94a3b8'});
 
     if(weekday==='wed'){
-      items.push({time:'16:00–16:30', title:'Afternoon study block', desc:'Short session before tuition.', color:SUBJECT_COLORS.History});
-      items.push({time:'16:30–18:00', title:'Math Tuition', desc:'End time estimated — overlaps the swim block below, flagged not resolved.', color:TUITION_COLOR});
-      items.push({time:'17:00–20:00', title:'Swim training', desc:'Overlaps Math Tuition and dinner — flagged, not resolved. Tell me how to fit these together.', color:SPORT_COLOR});
-      items.push({time:'18:00–19:00', title:'Dinner', desc:'', color:'#94a3b8'});
-      items.push({time:'19:00–20:00', title:'Gym', desc:'Overlaps the swim block above — flagged, not resolved.', color:SPORT_COLOR});
-      items.push({time:'20:00–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Chemistry});
+      items.push({time:'16:00–17:00', title:'Afternoon study block', desc:'Math Tuition moved to Saturday, so this now runs to swim.', color:SUBJECT_COLORS.History});
+      items.push({time:'17:00–20:00', title:'Swim training', desc:'', color:SPORT_COLOR});
+      items.push({time:'20:00–20:30', title:'Dinner', desc:'', color:'#94a3b8'});
+      items.push({time:'20:30–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Chemistry});
       items.push({time:'22:00–22:30', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
       items.push({time:'22:30', title:'Lights out', desc:'Non-negotiable given the 5am wake.', color:'#1e293b'});
     } else if(weekday==='fri'){
-      items.push({time:'16:00–18:00', title:'Afternoon study block', desc:'Nearest-exam subject priority.', color:SUBJECT_COLORS.History});
-      items.push({time:'17:00–20:00', title:'Swim training', desc:'Overlaps Gym and Physics Tuition below — flagged, not resolved. Tell me how to fit these together.', color:SPORT_COLOR});
-      items.push({time:'18:00–19:00', title:'Gym', desc:'Overlaps the swim block above — flagged, not resolved.', color:SPORT_COLOR});
-      items.push({time:'19:00–21:00', title:'Physics Tuition', desc:'Overlaps the swim block above — flagged, not resolved.', color:TUITION_COLOR});
+      items.push({time:'16:00–17:00', title:'Afternoon study block', desc:'Nearest-exam subject priority.', color:SUBJECT_COLORS.History});
+      items.push({time:'17:00–19:00', title:'Swim training', desc:'Shortened to make Physics Tuition at 7 — same as before.', color:SPORT_COLOR});
+      items.push({time:'19:00–21:00', title:'Physics Tuition', desc:'', color:TUITION_COLOR});
       items.push({time:'21:00–21:45', title:'Dinner', desc:'Later than usual on Fridays.', color:'#94a3b8'});
       items.push({time:'21:45–22:00', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
       items.push({time:'22:00', title:'Lights out', desc:'A little earlier than other nights since Physics Tuition runs late — catch up on sleep over the weekend.', color:'#1e293b'});
     } else {
-      items.push({time:'16:00–18:00', title:'Afternoon study block', desc:'Nearest-exam subject priority.', color:SUBJECT_COLORS.History});
-      items.push({time:'17:00–20:00', title:'Swim training', desc:'Overlaps Gym and dinner below — flagged, not resolved. Tell me how to fit these together.', color:SPORT_COLOR});
-      items.push({time:'18:00–19:00', title:'Gym', desc:'Overlaps the swim block above — flagged, not resolved.', color:SPORT_COLOR});
-      items.push({time:'19:00–19:30', title:'Dinner', desc:'', color:'#94a3b8'});
-      items.push({time:'19:30–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Chemistry});
+      items.push({time:'16:00–17:00', title:'Afternoon study block', desc:'Nearest-exam subject priority.', color:SUBJECT_COLORS.History});
+      items.push({time:'17:00–20:00', title:'Swim training', desc:'', color:SPORT_COLOR});
+      items.push({time:'20:00–20:30', title:'Dinner', desc:'', color:'#94a3b8'});
+      items.push({time:'20:30–22:00', title:'Evening study block', desc:'Review what was covered today + tackle problem sets.', color:SUBJECT_COLORS.Chemistry});
       items.push({time:'22:00–22:30', title:'Wind down', desc:'Screens off, light review only.', color:'#475569'});
       items.push({time:'22:30', title:'Lights out', desc:'Non-negotiable given the 5am wake.', color:'#1e293b'});
     }
