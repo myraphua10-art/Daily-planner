@@ -1,4 +1,4 @@
-const ICON = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' rx=\'22\' fill=\'%236366f1\'/%3E%3Ctext x=\'50\' y=\'66\' font-size=\'52\' text-anchor=\'middle\' fill=\'white\' font-family=\'-apple-system\'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E';
+const ICON = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' rx=\'22\' fill=\'%23818cf8\'/%3E%3Ctext x=\'50\' y=\'66\' font-size=\'52\' text-anchor=\'middle\' fill=\'%230b0d12\' font-family=\'-apple-system\'%3EP%3C/text%3E%3C/svg%3E';
 
 // Planner reminders arrive as an empty push — no payload to decrypt — so the
 // text is fetched here instead. Pushes that DO carry a payload (the older

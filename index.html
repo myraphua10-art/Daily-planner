@@ -9,15 +9,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Planner">
-<meta name="theme-color" content="#6366f1">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%236366f1'/%3E%3Ctext x='50' y='66' font-size='52' text-anchor='middle' fill='white' font-family='-apple-system'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#0b0d12">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23818cf8'/%3E%3Ctext x='50' y='66' font-size='52' text-anchor='middle' fill='%230b0d12' font-family='-apple-system'%3EP%3C/text%3E%3C/svg%3E">
 <link rel="manifest" id="manifestLink">
 
 <style>
   :root{
-    --bg:#f5f6fb; --card:#ffffff; --ink:#1c1e2b; --sub:#6b7280; --line:#e8e9f1;
-    --math:#3b82f6; --hist:#f59e0b; --phy:#8b5cf6; --chem:#10b981;
-    --free:#06b6d4; --own:#ef4444; --accent:#6366f1; --shadow: 0 4px 18px rgba(30,30,60,0.08);
+    --bg:#0b0d12; --bg2:#10131a; --card:#171b24; --card2:#1d212c; --ink:#e7e9ef; --sub:#8b93a7; --line:#262b36;
+    --math:#60a5fa; --hist:#fbbf24; --phy:#a78bfa; --chem:#34d399;
+    --free:#22d3ee; --own:#f87171; --accent:#818cf8; --shadow: 0 4px 18px rgba(0,0,0,0.45);
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
@@ -25,15 +25,15 @@
   html,body{margin:0; -webkit-text-size-adjust:100%;}
   body{
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:linear-gradient(160deg,#eef1fb 0%, #f7f4fb 100%); color:var(--ink); min-height:100vh;
+    background:linear-gradient(160deg,#0b0d12 0%, #10121c 100%); color:var(--ink); min-height:100vh;
     overscroll-behavior-y:none;
   }
   .app{display:flex; min-height:100vh;}
 
   /* ===== Desktop sidebar (hidden on mobile) ===== */
   nav.sidebar{
-    width:220px; background:var(--card); border-right:1px solid var(--line); padding:24px 14px;
-    position:sticky; top:0; height:100vh; flex-shrink:0;
+    width:230px; background:var(--bg2); border-right:1px solid var(--line); padding:24px 14px;
+    position:sticky; top:0; height:100vh; flex-shrink:0; display:flex; flex-direction:column;
   }
   nav.sidebar h1{font-size:17px; margin:0 0 4px; line-height:1.3;}
   nav.sidebar .tagline{font-size:12px; color:var(--sub); margin-bottom:24px;}
@@ -42,15 +42,15 @@
     padding:11px 12px; border-radius:10px; font-size:14px; color:var(--ink); cursor:pointer; margin-bottom:4px;
     transition:.15s;
   }
-  nav.sidebar button:hover{background:#f0f1fa;}
-  nav.sidebar button.active{background:var(--accent); color:white; font-weight:600;}
+  nav.sidebar button:hover{background:var(--card2);}
+  nav.sidebar button.active{background:var(--accent); color:#10131a; font-weight:600;}
 
   main{flex:1; padding:32px 40px 40px; max-width:1080px; width:100%;}
 
   /* ===== Mobile bottom tab bar ===== */
   nav.tabbar{
     display:none; position:fixed; left:0; right:0; bottom:0; z-index:50;
-    background:rgba(255,255,255,0.92); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    background:rgba(13,15,20,0.92); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
     border-top:1px solid var(--line);
     padding:6px 4px calc(6px + var(--safe-bottom));
     justify-content:space-around;
@@ -62,52 +62,53 @@
   }
   nav.tabbar button .ic{font-size:21px; line-height:1;}
   nav.tabbar button.active{color:var(--accent);}
-  nav.tabbar button:active{background:#f0f1fa;}
+  nav.tabbar button:active{background:var(--card2);}
 
   .install-banner{
-    display:none; background:linear-gradient(135deg,#fff,#f3f1ff); border:1px solid #e0d9ff; border-radius:14px;
-    padding:12px 14px; margin-bottom:16px; font-size:12.5px; color:#4338ca; align-items:center; gap:10px;
+    display:none; background:linear-gradient(135deg,#1a1830,#211c3d); border:1px solid #372f5e; border-radius:14px;
+    padding:12px 14px; margin-bottom:16px; font-size:12.5px; color:#c7cbfa; align-items:center; gap:10px;
   }
-  .install-banner b{display:block; font-size:13px; margin-bottom:2px;}
+  .install-banner b{display:block; font-size:13px; margin-bottom:2px; color:var(--ink);}
 
   .countdown-bar{
-    background:linear-gradient(135deg,var(--accent),#8b8ff0); color:white; border-radius:18px;
+    background:linear-gradient(135deg,var(--accent),#5b5fc7); color:#0d0f14; border-radius:18px;
     padding:18px 22px; margin-bottom:22px; box-shadow:var(--shadow); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
   }
   .countdown-bar .big{font-size:24px; font-weight:700;}
-  .countdown-bar .lbl{font-size:11.5px; opacity:.85; text-transform:uppercase; letter-spacing:.04em;}
+  .countdown-bar .lbl{font-size:11.5px; opacity:.75; text-transform:uppercase; letter-spacing:.04em;}
   h2.section-title{font-size:20px; margin:0 0 16px;}
-  .card{background:var(--card); border-radius:16px; box-shadow:var(--shadow); padding:18px 20px; margin-bottom:14px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:18px 20px; margin-bottom:14px;}
   .exam-card{display:flex; gap:14px; align-items:flex-start;}
   .exam-dot{width:10px; height:10px; border-radius:50%; margin-top:6px; flex-shrink:0;}
   .exam-card h3{margin:0 0 4px; font-size:15.5px;}
   .exam-meta{font-size:12.5px; color:var(--sub); margin-bottom:8px;}
-  .chip{display:inline-block; background:#eef0fb; color:#444; font-size:11.5px; padding:4px 10px; border-radius:20px; margin:2px 4px 0 0;}
+  .chip{display:inline-block; background:rgba(129,140,248,0.15); color:#c7cbfa; font-size:11.5px; padding:4px 10px; border-radius:20px; margin:2px 4px 0 0;}
   .badge{font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; margin-left:0; display:inline-block; margin-top:4px;}
-  .badge.confirmed{background:#d1fae5; color:#047857;}
-  .badge.estimated{background:#fef3c7; color:#92400e;}
+  .badge.confirmed{background:rgba(52,211,153,0.15); color:#34d399;}
+  .badge.estimated{background:rgba(251,191,36,0.15); color:#fbbf24;}
   .weight{font-weight:700;}
   .exam-days{font-size:13px; font-weight:700; padding:6px 13px; border-radius:20px; white-space:nowrap; align-self:center;}
   .week-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:10px;}
-  .day-col{background:#fafbff; border-radius:12px; padding:10px; min-height:140px;}
+  .day-col{background:var(--card2); border-radius:12px; padding:10px; min-height:140px;}
   .day-col h4{font-size:12px; margin:0 0 8px; text-align:center; color:var(--sub); text-transform:uppercase; letter-spacing:.03em;}
   .slot{font-size:11px; padding:7px 8px; border-radius:8px; margin-bottom:6px; line-height:1.35;}
-  .slot.free{background:#cffafe; border-left:3px solid var(--free); color:#0e7490;}
-  .slot.studyblock{background:#ede9fe; border-left:3px solid var(--phy); color:#5b21b6;}
-  .slot.own{background:#fee2e2; border-left:3px solid var(--own); color:#991b1b; text-align:center; font-weight:700;}
+  .slot.free{background:rgba(34,211,238,0.12); border-left:3px solid var(--free); color:var(--free);}
+  .slot.studyblock{background:rgba(167,139,250,0.15); border-left:3px solid var(--phy); color:var(--phy);}
+  .slot.own{background:rgba(248,113,113,0.15); border-left:3px solid var(--own); color:var(--own); text-align:center; font-weight:700;}
   .date-picker-row{display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;}
-  .date-nav{display:flex; align-items:center; gap:8px; background:white; border-radius:14px; padding:6px; box-shadow:var(--shadow);}
+  .date-nav{display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:6px; box-shadow:var(--shadow);}
   .date-nav button{
-    width:38px; height:38px; border-radius:10px; border:none; background:#f0f1fa; color:var(--ink); font-size:18px;
+    width:38px; height:38px; border-radius:10px; border:none; background:var(--card2); color:var(--ink); font-size:18px;
     cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;
   }
-  .date-nav button:active{background:var(--accent); color:white;}
+  .date-nav button:active{background:var(--accent); color:#10131a;}
   .date-nav input[type=date]{
     border:none; font-size:14px; font-weight:600; padding:8px 6px; background:none; color:var(--ink); min-width:0; flex:1;
+    color-scheme:dark;
   }
   .parity-pill{font-size:12px; font-weight:700; padding:5px 13px; border-radius:20px; flex-shrink:0;}
-  .parity-pill.odd{background:#fde68a; color:#92400e;}
-  .parity-pill.even{background:#bae6fd; color:#0369a1;}
+  .parity-pill.odd{background:rgba(251,191,36,0.18); color:#fbbf24;}
+  .parity-pill.even{background:rgba(96,165,250,0.18); color:#60a5fa;}
   .timeline{position:relative; margin-top:8px;}
   .tline-item{display:flex; gap:12px; margin-bottom:2px;}
   .tline-time{width:64px; flex-shrink:0; font-size:11.5px; color:var(--sub); padding-top:11px; text-align:right;}
@@ -118,27 +119,27 @@
   .topic-subject{margin-bottom:18px;}
   .topic-subject h3{display:flex; align-items:center; gap:10px; font-size:15px; margin:0 0 8px;}
   .subject-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0;}
-  .progress-bg{height:8px; background:#eee; border-radius:6px; overflow:hidden; margin:6px 0 12px;}
+  .progress-bg{height:8px; background:var(--card2); border-radius:6px; overflow:hidden; margin:6px 0 12px;}
   .progress-fill{height:100%; border-radius:6px; transition:width .3s;}
   .topic-row{display:flex; align-items:center; gap:12px; padding:10px 2px; font-size:14px; min-height:30px;}
   .topic-row input{width:20px; height:20px; cursor:pointer; flex-shrink:0; accent-color:var(--accent);}
   .topic-row.done span{text-decoration:line-through; color:var(--sub);}
-  .note{font-size:12px; color:var(--sub); background:#f8f9fd; border-radius:10px; padding:10px 14px; margin-top:6px;}
+  .note{font-size:12px; color:var(--sub); background:var(--card2); border-radius:10px; padding:10px 14px; margin-top:6px;}
 
   /* ===== Category dropdowns (What's Coming Up) ===== */
-  .cat-card{background:var(--card); border-radius:16px; box-shadow:var(--shadow); margin-bottom:12px; overflow:hidden;}
+  .cat-card{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); margin-bottom:12px; overflow:hidden;}
   .cat-card > summary{
     display:flex; align-items:center; gap:13px; padding:15px 18px; cursor:pointer; list-style:none;
     -webkit-user-select:none; user-select:none;
   }
   .cat-card > summary::-webkit-details-marker{display:none;}
-  .cat-card > summary:active{background:#f8f9fd;}
-  .cat-ic{width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0;}
+  .cat-card > summary:active{background:var(--card2);}
+  .cat-ic{width:14px; height:14px; border-radius:50%; flex-shrink:0;}
   .cat-name{flex:1; min-width:0;}
   .cat-name b{display:block; font-size:15.5px; line-height:1.3;}
   .cat-name span{font-size:11.5px; color:var(--sub);}
   .cat-count{font-size:12.5px; font-weight:700; padding:4px 11px; border-radius:20px; flex-shrink:0;}
-  .cat-chev{color:#c3c6d4; font-size:11px; flex-shrink:0; transition:transform .18s;}
+  .cat-chev{color:#4a5266; font-size:11px; flex-shrink:0; transition:transform .18s;}
   .cat-card[open] .cat-chev{transform:rotate(90deg);}
   .cat-body{padding:0 18px 14px;}
   .exam-card.flat{border-top:1px solid var(--line); padding:14px 0; margin:0;}
@@ -149,40 +150,40 @@
   .sub-head{font-size:11px; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em; padding:14px 0 2px;}
 
   /* ===== My Entries (manual input) ===== */
-  .seg{display:flex; flex-wrap:wrap; gap:5px; background:#f0f1fa; padding:4px; border-radius:13px; margin-bottom:16px;}
+  .seg{display:flex; flex-wrap:wrap; gap:5px; background:var(--card2); padding:4px; border-radius:13px; margin-bottom:16px;}
   .seg button{
     flex:1 1 92px; border:none; background:none; font:inherit; font-size:12.5px; font-weight:600;
     padding:10px 4px; border-radius:10px; cursor:pointer; color:var(--sub); white-space:nowrap;
   }
-  .seg button.active{background:#fff; color:var(--accent); box-shadow:0 1px 5px rgba(30,30,60,.12);}
+  .seg button.active{background:var(--card); color:var(--accent); box-shadow:0 1px 5px rgba(0,0,0,.3);}
   .form-row{display:flex; gap:12px; flex-wrap:wrap; margin-bottom:13px;}
   .field{flex:1; min-width:150px; display:flex; flex-direction:column; gap:6px;}
   .field label{font-size:11px; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.04em;}
   .field input, .field textarea{
     font:inherit; font-size:15px; padding:11px 13px; border:1px solid var(--line); border-radius:11px;
-    background:#fbfbfe; color:var(--ink); width:100%; -webkit-appearance:none; appearance:none;
+    background:var(--bg2); color:var(--ink); width:100%; -webkit-appearance:none; appearance:none;
   }
-  .field input:focus, .field textarea:focus{outline:none; border-color:var(--accent); background:#fff;}
+  .field input:focus, .field textarea:focus{outline:none; border-color:var(--accent); background:var(--card);}
   .field textarea{min-height:62px; resize:vertical;}
   .btn{
     font:inherit; font-size:14.5px; font-weight:600; padding:12px 20px; border-radius:12px; border:none;
-    cursor:pointer; background:var(--accent); color:#fff;
+    cursor:pointer; background:var(--accent); color:#10131a;
   }
   .btn:active{opacity:.85;}
-  .btn.ghost{background:#f0f1fa; color:var(--ink);}
+  .btn.ghost{background:var(--card2); color:var(--ink);}
   .btn.small{font-size:12.5px; font-weight:600; padding:7px 13px; border-radius:9px;}
-  .btn.danger{background:#fee2e2; color:#991b1b;}
-  .form-err{font-size:12.5px; color:#b91c1c; margin-top:2px;}
+  .btn.danger{background:rgba(248,113,113,0.15); color:#f87171;}
+  .form-err{font-size:12.5px; color:#f87171; margin-top:2px;}
   .chip-toggle{
     font:inherit; font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:20px; cursor:pointer;
-    border:1px solid var(--line); background:#fff; color:var(--sub); margin:0;
+    border:1px solid var(--line); background:var(--card); color:var(--sub); margin:0;
   }
-  .chip-toggle.on{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .chip-toggle.on{background:var(--accent); border-color:var(--accent); color:#10131a;}
   .chip-row{display:flex; flex-wrap:wrap; gap:6px;}
   .remind-row{padding:10px 0; border-top:1px solid var(--line);}
   .remind-name{font-size:13.5px; font-weight:600; margin-bottom:7px;}
   .code-box{
-    display:flex; align-items:center; gap:10px; background:#f6f7fc; border:1px solid var(--line);
+    display:flex; align-items:center; gap:10px; background:var(--card2); border:1px solid var(--line);
     border-radius:11px; padding:10px 12px;
   }
   .code-box code{
@@ -204,6 +205,37 @@
   details.builtins summary::before, details.builtin-events summary::before{content:'▸ '; color:var(--sub);}
   details.builtins[open] summary::before, details.builtin-events[open] summary::before{content:'▾ ';}
 
+  /* ===== Weekly summary sidebar ===== */
+  .weekstats{margin-top:auto; padding-top:18px; border-top:1px solid var(--line);}
+  .weekstats h4{font-size:10.5px; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.06em; margin:0 0 10px;}
+  .weekstats-row{display:flex; align-items:center; gap:8px; padding:5px 0; font-size:12.5px;}
+  .weekstats-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .weekstats-label{flex:1; color:var(--sub);}
+  .weekstats-count{font-weight:700; color:var(--ink);}
+
+  /* ===== Month calendar ===== */
+  .month-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .month-nav .label{font-size:15px; font-weight:700;}
+  .month-nav-btns{display:flex; gap:6px;}
+  .month-nav-btns button{
+    width:32px; height:32px; border-radius:9px; border:1px solid var(--line); background:var(--card);
+    color:var(--ink); font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .month-nav-btns button:active{background:var(--accent); color:#10131a;}
+  .month-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+  .month-dow{font-size:10px; font-weight:700; color:var(--sub); text-align:center; text-transform:uppercase; letter-spacing:.04em; padding-bottom:4px;}
+  .month-cell{
+    background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:6px 5px; min-height:64px;
+    cursor:pointer; display:flex; flex-direction:column; gap:4px; transition:.12s;
+  }
+  .month-cell:hover{border-color:var(--accent);}
+  .month-cell.outside{opacity:.35;}
+  .month-cell.today{border-color:var(--accent); border-width:2px; padding:5px 4px;}
+  .month-daynum{font-size:11.5px; font-weight:700;}
+  .month-dots{display:flex; flex-wrap:wrap; gap:3px;}
+  .month-dot{width:6px; height:6px; border-radius:50%; flex-shrink:0;}
+  .month-tag{font-size:9px; font-weight:700; padding:1px 4px; border-radius:4px; line-height:1.5; white-space:nowrap;}
+
   /* ===== Mobile breakpoint ===== */
   @media (max-width:880px){
     nav.sidebar{display:none;}
@@ -214,6 +246,8 @@
     .countdown-bar{flex-direction:column; align-items:flex-start; text-align:left;}
     .countdown-bar > div:last-child{text-align:left !important;}
     h2.section-title{font-size:18px;}
+    .month-cell{min-height:44px;}
+    .month-tag{display:none;}
   }
 </style>
 </head>
@@ -224,9 +258,10 @@
     <div class="tagline">RGS Sec 4 · Student-Athlete</div>
     <button data-tab="today" class="active">Today's Plan</button>
     <button data-tab="exams">What&#39;s Coming Up</button>
-    <button data-tab="week">Weekly Free-Time Map</button>
+    <button data-tab="week">Calendar</button>
     <button data-tab="topics">Topic Tracker</button>
     <button data-tab="mine">My Entries</button>
+    <div id="weekStatsCard"></div>
   </nav>
 
   <main>
@@ -234,7 +269,7 @@
       <div><b>Add to your Home Screen</b>In Safari, tap the Share icon, then "Add to Home Screen" — it'll open full-screen like a real app.</div>
     </div>
     <div class="install-banner" id="notifBanner" style="cursor:pointer;">
-      <div><b id="notifTitle">Timetable reminders</b><span id="notifStatus">Tap to get nudges for swim, gym, tuition and study blocks. Exam and event reminders are set up in My Entries.</span></div>
+      <div><b id="notifTitle">Timetable reminders</b><span id="notifStatus">Tap to get nudges for swim, tuition and study blocks. Exam and event reminders are set up in My Entries.</span></div>
     </div>
     <div class="countdown-bar" id="countdownBar"></div>
 
@@ -248,7 +283,7 @@
   <nav class="tabbar">
     <button data-tab="today" class="active">Today</button>
     <button data-tab="exams">Upcoming</button>
-    <button data-tab="week">Week Map</button>
+    <button data-tab="week">Calendar</button>
     <button data-tab="topics">Topics</button>
     <button data-tab="mine">Add</button>
   </nav>
@@ -327,7 +362,7 @@ async function enableNotifications(){
       body: JSON.stringify(sub),
     });
     titleEl.textContent = 'Timetable reminders on';
-    statusEl.textContent = "You'll get nudges for swim, gym, tuition and study blocks.";
+    statusEl.textContent = "You'll get nudges for swim, tuition and study blocks.";
   } catch(err){
     statusEl.textContent = 'Something went wrong enabling notifications: ' + err.message;
   }
@@ -425,11 +460,11 @@ const PERSONAL_DATES = ['2026-07-03','2026-07-10','2026-07-12','2026-07-19'];
 // The five buckets everything on the calendar falls into. Order here is the
 // order the cards appear in on the Upcoming tab.
 const CATEGORIES = [
-  {id:'exams',     icon:'', label:'Exams',     noun:'exam',      blurb:'papers, CBAs and EYAs',            color:'#ef4444', tint:'#fee2e2'},
-  {id:'important', icon:'', label:'Important', noun:'event',     blurb:'meetings, deadlines, school',      color:'#f59e0b', tint:'#fef3c7'},
-  {id:'social',    icon:'', label:'Social',    noun:'event',     blurb:'birthdays, parties, going out',    color:'#ec4899', tint:'#fce7f3'},
-  {id:'sport',     icon:'', label:'Sport',     noun:'session',   blurb:'training, meets and competitions', color:'#0891b2', tint:'#cffafe'},
-  {id:'other',     icon:'', label:'Other',     noun:'reminder',  blurb:'anything else you noted down',     color:'#64748b', tint:'#e2e8f0'},
+  {id:'exams',     icon:'', label:'Exams',     noun:'exam',      blurb:'papers, CBAs and EYAs',            color:'#f87171', tint:'rgba(248,113,113,0.15)'},
+  {id:'important', icon:'', label:'Important', noun:'event',     blurb:'meetings, deadlines, school',      color:'#fbbf24', tint:'rgba(251,191,36,0.15)'},
+  {id:'social',    icon:'', label:'Social',    noun:'event',     blurb:'birthdays, parties, going out',    color:'#f472b6', tint:'rgba(244,114,182,0.15)'},
+  {id:'sport',     icon:'', label:'Sport',     noun:'session',   blurb:'training, meets and competitions', color:'#22d3ee', tint:'rgba(34,211,238,0.15)'},
+  {id:'other',     icon:'', label:'Other',     noun:'reminder',  blurb:'anything else you noted down',     color:'#94a3b8', tint:'rgba(148,163,184,0.15)'},
 ];
 const CAT = Object.fromEntries(CATEGORIES.map(c=>[c.id, c]));
 
@@ -857,7 +892,7 @@ function renderExams(){
       const n = catCount(c.id);
       return `<details class="cat-card" data-cat="${c.id}" ${open.includes(c.id)?'open':''}>
         <summary>
-          <div class="cat-ic" style="background:${c.tint}">${c.icon}</div>
+          <div class="cat-ic" style="background:${c.color}"></div>
           <div class="cat-name"><b>${c.label}</b><span>${c.blurb}</span></div>
           <div class="cat-count" style="background:${c.tint}; color:${c.color}">${n}</div>
           <div class="cat-chev">▶</div>
@@ -871,11 +906,140 @@ function renderExams(){
   });
 }
 
+// ---- Month calendar (Week Map tab) ----
+const today0 = new Date();
+let calYear = today0.getFullYear(), calMonthIdx = today0.getMonth();
+
+// What to show inside one day's cell: a dot per category with something on
+// that date, plus small tags for swim/tuition pulled straight off the day
+// timeline (so it never drifts out of sync with Today's Plan).
+function dayBadges(dateStr){
+  const dots = [];
+  if(allExams().some(e=>e.date===dateStr)) dots.push(CAT.exams.color);
+  const hidden = loadHidden();
+  (EVENTS[dateStr]||[]).forEach((ev,i)=>{
+    if(!hidden.includes(eventKey(dateStr,i))) dots.push((CAT[ev.cat]||CAT.important).color);
+  });
+  loadCustom().forEach(x=>{
+    if(x.date===dateStr && x.kind!=='exams') dots.push((CAT[x.kind]||CAT.other).color);
+  });
+  const tags = [];
+  if(dateStr>=MIN_DATE && dateStr<=MAX_DATE){
+    const items = buildDayTimeline(dateStr).items;
+    if(items.some(it=>it.color===SPORT_COLOR)) tags.push({label:'Swim', color:SPORT_COLOR});
+    if(items.some(it=>it.color===TUITION_COLOR)) tags.push({label:'Tuition', color:TUITION_COLOR});
+  }
+  return {dots: dots.slice(0,6), tags};
+}
+
+function monthGridHtml(){
+  const first = new Date(calYear, calMonthIdx, 1);
+  const startOffset = (first.getDay()+6)%7; // Monday-first grid
+  const gridStart = new Date(calYear, calMonthIdx, 1-startOffset);
+  const todayStr = todayISO();
+  const monthLabel = first.toLocaleDateString('en-GB',{month:'long', year:'numeric'});
+  const dows = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const weeks = Math.ceil((startOffset + new Date(calYear, calMonthIdx+1, 0).getDate()) / 7);
+  let cells = '';
+  for(let i=0;i<weeks*7;i++){
+    const d = new Date(calYear, calMonthIdx, 1-startOffset+i);
+    const dateStr = toISODate(d);
+    const outside = d.getMonth()!==calMonthIdx;
+    const {dots, tags} = dayBadges(dateStr);
+    cells += `<div class="month-cell ${outside?'outside':''} ${dateStr===todayStr?'today':''}" data-goto="${dateStr}">
+      <div class="month-daynum">${d.getDate()}</div>
+      <div class="month-dots">${dots.map(c=>`<span class="month-dot" style="background:${c}"></span>`).join('')}</div>
+      ${tags.map(t=>`<span class="month-tag" style="background:${t.color}22; color:${t.color}">${t.label}</span>`).join('')}
+    </div>`;
+  }
+  return `<div class="card">
+    <div class="month-nav">
+      <div class="label">${monthLabel}</div>
+      <div class="month-nav-btns"><button id="calPrev">‹</button><button id="calToday">•</button><button id="calNext">›</button></div>
+    </div>
+    <div class="month-grid">${dows.map(d=>`<div class="month-dow">${d}</div>`).join('')}${cells}</div>
+  </div>`;
+}
+
+function redrawMonthCal(){
+  const card = document.getElementById('monthCalCard');
+  card.innerHTML = monthGridHtml();
+  wireMonthCal(card);
+}
+function wireMonthCal(card){
+  card.querySelector('#calPrev').addEventListener('click', ()=>{
+    calMonthIdx--; if(calMonthIdx<0){calMonthIdx=11; calYear--;}
+    redrawMonthCal();
+  });
+  card.querySelector('#calNext').addEventListener('click', ()=>{
+    calMonthIdx++; if(calMonthIdx>11){calMonthIdx=0; calYear++;}
+    redrawMonthCal();
+  });
+  card.querySelector('#calToday').addEventListener('click', ()=>{
+    const t = new Date(); calYear = t.getFullYear(); calMonthIdx = t.getMonth();
+    redrawMonthCal();
+  });
+  card.querySelectorAll('[data-goto]').forEach(cell=>{
+    cell.addEventListener('click', ()=>{
+      const date = cell.dataset.goto;
+      if(date<MIN_DATE || date>MAX_DATE) return;
+      switchTab('today');
+      renderToday(date);
+    });
+  });
+}
+
+// ---- Weekly summary (sidebar) ----
+function currentWeekRange(){
+  const mon = mondayOf(new Date());
+  const start = toISODate(mon);
+  return {start, end: addDays(start, 6)};
+}
+function weekStatsData(){
+  const {start, end} = currentWeekRange();
+  const within = d => d && d>=start && d<=end;
+  const counts = {exams:0, important:0, social:0, other:0, swim:0, tuition:0};
+  allExams().forEach(e=>{ if(within(e.date)) counts.exams++; });
+  ['important','social','other'].forEach(catId=>{
+    categoryItems(catId).forEach(it=>{ if(within(it.date)) counts[catId]++; });
+  });
+  for(let i=0;i<7;i++){
+    const day = addDays(start, i);
+    if(day<MIN_DATE || day>MAX_DATE) continue;
+    buildDayTimeline(day).items.forEach(it=>{
+      if(it.color===SPORT_COLOR) counts.swim++;
+      else if(it.color===TUITION_COLOR) counts.tuition++;
+    });
+  }
+  return counts;
+}
+function weekStatsHtml(){
+  const c = weekStatsData();
+  const rows = [
+    {label:'Exams', color:CAT.exams.color, count:c.exams},
+    {label:'Important', color:CAT.important.color, count:c.important},
+    {label:'Social', color:CAT.social.color, count:c.social},
+    {label:'Swim', color:SPORT_COLOR, count:c.swim},
+    {label:'Tuition', color:TUITION_COLOR, count:c.tuition},
+    {label:'Other', color:CAT.other.color, count:c.other},
+  ];
+  return `<div class="weekstats"><h4>This week</h4>${rows.map(r=>
+    `<div class="weekstats-row"><span class="weekstats-dot" style="background:${r.color}"></span><span class="weekstats-label">${r.label}</span><span class="weekstats-count">${r.count}</span></div>`
+  ).join('')}</div>`;
+}
+function renderWeekStats(){
+  const el = document.getElementById('weekStatsCard');
+  if(el) el.innerHTML = weekStatsHtml();
+}
+
 function renderWeekMap(){
   const el = document.getElementById('tab-week');
-  el.innerHTML = `<h2 class="section-title">Weekly Free-Time Map</h2>
-    <p style="color:var(--sub); font-size:13px; margin-top:-8px">PE and Biology lessons are replaced with free study time. Existing Study Blocks (purple) are already in the normal timetable.</p>
+  el.innerHTML = `<h2 class="section-title">Calendar &amp; Free-Time Map</h2>
+    <div id="monthCalCard">${monthGridHtml()}</div>
+    <h3 style="margin:22px 0 4px; font-size:15px">Weekly Free-Time Pattern</h3>
+    <p style="color:var(--sub); font-size:13px; margin-top:0">PE and Biology lessons are replaced with free study time. Existing Study Blocks (purple) are already in the normal timetable.</p>
     <div id="weekMapGrids"></div>`;
+  wireMonthCal(document.getElementById('monthCalCard'));
   const grids = document.getElementById('weekMapGrids');
   ['odd','even'].forEach(parity=>{
     const days = ['mon','tue','wed','thu','fri'];
@@ -888,7 +1052,7 @@ function renderWeekMap(){
         else { html += `<div class="slot free">${f.subject} free<br>${f.start}–${f.end}</div>`; }
       });
       blocks.forEach(b=>{ html += `<div class="slot studyblock">Study Block<br>${b.start}–${b.end}</div>`; });
-      if(!freed.length && !blocks.length) html += `<div style="font-size:11.5px; color:#bbb; text-align:center; padding-top:10px">normal day</div>`;
+      if(!freed.length && !blocks.length) html += `<div style="font-size:11.5px; color:var(--sub); text-align:center; padding-top:10px">normal day</div>`;
       html += `</div>`;
       return html;
     }).join('');
@@ -901,7 +1065,7 @@ function renderWeekMap(){
   });
 }
 
-const TUITION_COLOR = '#ec4899';
+const TUITION_COLOR = '#fb923c';
 // Swim and gym blocks in the day timeline are painted with this, which is also
 // how the Sport category finds them without duplicating the weekly schedule.
 const SPORT_COLOR = CAT.sport.color;
@@ -1031,24 +1195,24 @@ function renderToday(dateStr){
   </div>`;
   if(data.examsToday && data.examsToday.length){
     const list = data.examsToday.map(e=>`${e.subject} ${e.code} (${e.weight!=null?e.weight+'%':e.weightLabel})`).join(' + ');
-    header += `<div class="card" style="background:#fef2f2; border:1px solid #fecaca;">
+    header += `<div class="card" style="background:rgba(248,113,113,0.12); border:1px solid rgba(248,113,113,0.35);">
       <strong>EXAM${data.examsToday.length>1?'S':''} TODAY:</strong> ${list}. Light recap only — no new content.
     </div>`;
   }
   if(data.ownDay){
-    header += `<div class="card" style="background:#fef2f2; border:1px solid #fecaca;"><strong>OWN DAY</strong> — full day at home. Great day for a timed past paper + deep review.</div>`;
+    header += `<div class="card" style="background:rgba(248,113,113,0.12); border:1px solid rgba(248,113,113,0.35);"><strong>OWN DAY</strong> — full day at home. Great day for a timed past paper + deep review.</div>`;
   }
   if(data.override){
-    header += `<div class="card" style="background:#fff7ed; border:1px solid #fed7aa;"><strong>Schedule swap:</strong> ${data.override.note}</div>`;
+    header += `<div class="card" style="background:rgba(251,146,60,0.12); border:1px solid rgba(251,146,60,0.35);"><strong>Schedule swap:</strong> ${data.override.note}</div>`;
   }
   const dayEvents = eventsFor(dateStr);
   if(dayEvents.length){
-    header += `<div class="card" style="background:#fdf4ff; border:1px solid #f0abfc;">${dayEvents.map(e=>`<div>${e}</div>`).join('')}</div>`;
+    header += `<div class="card" style="background:rgba(244,114,182,0.12); border:1px solid rgba(244,114,182,0.35);">${dayEvents.map(e=>`<div>${e}</div>`).join('')}</div>`;
   }
   const wdIdxToday = new Date(dateStr+'T00:00:00').getDay();
   const isPersonalDay = PERSONAL_DATES.includes(dateStr) || wdIdxToday===5 || wdIdxToday===0 || (wdIdxToday===1 && data.parity==='odd');
   if(isPersonalDay){
-    header += `<div class="card" style="background:#f8fafc; border:1px solid #e2e8f0;"><strong>Personal plans today</strong></div>`;
+    header += `<div class="card" style="background:var(--card2); border:1px solid var(--line);"><strong>Personal plans today</strong></div>`;
   }
   const timeline = `<div class="timeline">${data.items.map(it=>`
     <div class="tline-item">
@@ -1220,8 +1384,8 @@ function syncCardHtml(){
 
   const s = syncStatus;
   const line = s.state==='syncing' ? '<span style="color:var(--sub)">Syncing…</span>'
-    : s.state==='error' ? `<span style="color:#b91c1c">${esc(s.error)}</span>`
-    : s.at ? `<span style="color:#047857">Synced ${agoText(s.at)}</span>`
+    : s.state==='error' ? `<span style="color:#f87171">${esc(s.error)}</span>`
+    : s.at ? `<span style="color:#34d399">Synced ${agoText(s.at)}</span>`
     : '<span style="color:var(--sub)">Waiting for first sync…</span>';
 
   return `<div class="card">
@@ -1405,7 +1569,7 @@ function reminderCardHtml(){
       ? 'This device gets a notification before the things you pick below. Timings are shared with your other devices.'
       : 'Get a notification before exams, deadlines and anything else you add.'}</div>
     ${pushState.msg ? `<div class="form-err" style="margin-top:8px">${esc(pushState.msg)}</div>` : ''}
-    ${pushState.ok ? `<div style="font-size:12.5px; color:#047857; margin-top:8px">${esc(pushState.ok)}</div>` : ''}
+    ${pushState.ok ? `<div style="font-size:12.5px; color:#34d399; margin-top:8px">${esc(pushState.ok)}</div>` : ''}
     <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap">
       ${on
         ? `<button class="btn ghost small" id="testPush" ${pushState.busy?'disabled':''}>Send a test</button>
@@ -1473,8 +1637,10 @@ function refreshEverything(){
   renderCountdown();
   renderExams();
   renderToday(currentDate);
+  renderWeekMap();
   renderTopics();
   renderMine();
+  renderWeekStats();
 }
 
 function entryFormHtml(){
@@ -1777,8 +1943,8 @@ const manifest = {
   short_name: "Planner",
   start_url: ".",
   display: "standalone",
-  background_color: "#f5f6fb",
-  theme_color: "#6366f1",
+  background_color: "#0b0d12",
+  theme_color: "#0b0d12",
   icons: [{
     src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%236366f1'/%3E%3Ctext x='50' y='66' font-size='52' text-anchor='middle' fill='white' font-family='-apple-system'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E",
     sizes: "100x100", type: "image/svg+xml"
@@ -1799,7 +1965,7 @@ if('serviceWorker' in navigator && 'PushManager' in window){
     if(reg) return reg.pushManager.getSubscription().then(sub=>{
       if(sub){
         document.getElementById('notifTitle').textContent = 'Timetable reminders on';
-        document.getElementById('notifStatus').textContent = "You'll get nudges for swim, gym, tuition and study blocks.";
+        document.getElementById('notifStatus').textContent = "You'll get nudges for swim, tuition and study blocks.";
       }
     });
   });
@@ -1812,6 +1978,7 @@ renderExams();
 renderWeekMap();
 renderTopics();
 renderMine();
+renderWeekStats();
 const todayStr = todayISO();
 const initDate = (todayStr >= MIN_DATE && todayStr <= MAX_DATE) ? todayStr : MIN_DATE;
 renderToday(initDate);
